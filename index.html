@@ -133,9 +133,6 @@
   .ep-nav{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:.8rem;font-weight:500;cursor:pointer;transition:all var(--t);font-family:inherit}
   .ep-nav:hover{background:var(--bg4)}
   .ep-nav:disabled{opacity:.3;cursor:default}
-  .prov-grp{display:flex;gap:5px;flex-wrap:wrap}
-  .prov-btn{padding:4px 10px;border-radius:5px;background:var(--bg4);border:1px solid var(--border);color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;transition:all var(--t);font-family:inherit;text-transform:uppercase;letter-spacing:.5px}
-  .prov-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
   .ep-sidebar{background:var(--bg2);display:flex;flex-direction:column;max-height:calc(100vh - 56px);overflow:hidden;position:sticky;top:56px;grid-row:1/4}
   .ep-sidebar-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
   .ep-sidebar-head-title{font-size:.85rem;font-weight:600}
@@ -266,7 +263,6 @@
           <button class="ctrl-btn" id="btn-dub" onclick="switchAudio('dub')">DUB</button>
         </div>
         <div class="ctrl-sep"></div>
-        <div class="ctrl-grp"><span class="ctrl-label">Source:</span><div class="prov-grp" id="prov-grp"></div></div>
         <div class="nav-btns">
           <button class="ep-nav" id="btn-prev" onclick="prevEp()"><svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4v16H3V4h2z"/></svg>Prev</button>
           <button class="ep-nav" id="btn-next" onclick="nextEp()">Next<svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zm14 0v16h-2V4h2z"/></svg></button>
@@ -290,15 +286,16 @@
 //  CONFIG
 // ═══════════════════════════════════════════════════════════
 let PROXY = localStorage.getItem('animura_proxy') || '';
-const ANILIST = 'https://graphql.anilist.co'; // Called directly — CORS is open
+const ANILIST = 'https://graphql.anilist.co';
 
-function proxyApi(path) {
-  if (!PROXY) { showBanner(); throw new Error('No proxy configured.'); }
-  return PROXY.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path);
+function proxyUrl(path) {
+  if (!PROXY) { showBanner(); throw new Error('No proxy configured. Paste your Worker URL above.'); }
+  const base = PROXY.replace(/\/$/, '');
+  return base + (path.startsWith('/') ? path : '/' + path);
 }
 
 // ═══════════════════════════════════════════════════════════
-//  ANILIST GRAPHQL — called directly from the browser
+//  ANILIST  (called directly — CORS is open)
 // ═══════════════════════════════════════════════════════════
 async function gql(query, variables = {}) {
   const res = await fetch(ANILIST, {
@@ -390,12 +387,12 @@ function toast(msg, ms = 2800) {
 //  STATE
 // ═══════════════════════════════════════════════════════════
 let spotlight = [], spIdx = 0, spTimer;
-let curAnime = null, curEps = {}, curProv = 'aniwatch', curAudio = 'sub', curEpIdx = 0;
+let curAnime = null, curEps = {}, curAudio = 'sub', curEpIdx = 0;
 let allEps = [], filteredEps = [];
 let curTab = 'TRENDING_DESC', curGenre = '', curPage = 1;
 
 // ═══════════════════════════════════════════════════════════
-//  SPOTLIGHT  (direct AniList)
+//  SPOTLIGHT
 // ═══════════════════════════════════════════════════════════
 async function loadSpotlight() {
   try {
@@ -428,7 +425,7 @@ function startSpotTimer() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  HOME GRID  (direct AniList)
+//  HOME GRID
 // ═══════════════════════════════════════════════════════════
 async function loadGrid(tab = 'TRENDING_DESC', page = 1, genre = '') {
   const g = $('#main-grid');
@@ -488,7 +485,7 @@ function filterGenre(btn, genre) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  SEARCH  (direct AniList)
+//  SEARCH
 // ═══════════════════════════════════════════════════════════
 let stimer;
 $('#search-input').addEventListener('input', e => {
@@ -535,28 +532,31 @@ async function openAnime(id, startIdx = 0) {
   $('#btn-sub').classList.add('active'); $('#btn-dub').classList.remove('active');
   $('#btn-sub').classList.remove('unavailable'); $('#btn-dub').classList.remove('unavailable');
   $('#ep-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:.8rem;">Loading episodes…</div>';
-  $('#anime-info').innerHTML = ''; $('#related-section').innerHTML = ''; $('#prov-grp').innerHTML = '';
+  $('#anime-info').innerHTML = ''; $('#related-section').innerHTML = '';
   showLoader('Fetching info…');
 
-  // Full info query (direct AniList)
   const infoQ = `query($id:Int){Media(id:$id,type:ANIME){
     ${MEDIA_FIELDS}
     relations{edges{relationType node{id title{romaji english}coverImage{large}format}}}
     recommendations(sort:RATING_DESC){nodes{rating mediaRecommendation{id title{romaji english}coverImage{large}format averageScore}}}
-    characters(sort:ROLE,perPage:20){edges{role node{id name{full}image{large}}voiceActors(language:JAPANESE){id name{full}image{large}}}}
-    stats{scoreDistribution{score amount}statusDistribution{status amount}}
   }}`;
 
-  // Episodes via proxy (aniwatch needs CORS proxy)
   const [infoRes, epRes] = await Promise.allSettled([
     gql(infoQ, { id }),
-    fetch(proxyApi(`/episodes/${id}`)).then(r => { if (!r.ok) throw new Error(`Episodes ${r.status}`); return r.json(); }),
+    (async () => {
+      const r = await fetch(proxyUrl(`/episodes/${id}`));
+      if (!r.ok) {
+        const body = await r.text().catch(() => '');
+        throw new Error(`Episodes ${r.status}: ${body.slice(0, 200)}`);
+      }
+      return r.json();
+    })(),
   ]);
 
   if (infoRes.status === 'fulfilled') {
     curAnime = infoRes.value.Media;
     renderAnimeInfo(); renderRelated();
-  } else console.warn('Info failed:', infoRes.reason);
+  } else console.warn('Info failed:', infoRes.reason?.message);
 
   if (epRes.status === 'rejected') {
     $('#ep-list').innerHTML = `<div style="padding:16px 14px">
@@ -564,58 +564,41 @@ async function openAnime(id, startIdx = 0) {
       <div style="color:var(--muted);font-size:.75rem;line-height:1.5">${epRes.reason?.message || 'Unknown error'}</div>
       <button onclick="openAnime(${id})" style="margin-top:10px;padding:6px 14px;border-radius:6px;background:var(--accent);border:none;color:#fff;font-family:inherit;font-size:.75rem;cursor:pointer">↺ Retry</button>
     </div>`;
-    showErr('Episodes could not be loaded. Check your proxy Worker URL.');
+    showErr('Episodes could not be loaded. Is your proxy running?');
     return;
   }
 
+  // epRes.value has shape: { providers: { aniwatch: { episodes: { sub: [...], dub: [...] } } } }
   curEps = epRes.value.providers || {};
-  const provs = Object.keys(curEps);
-  curProv = provs.includes('aniwatch') ? 'aniwatch' : (provs[0] || '');
-  renderProvBtns(provs);
   buildEpList();
   if (allEps.length) loadEpisode(startIdx);
   else { hideLoader(); showErr('No episodes found.'); }
 }
 
 // ═══════════════════════════════════════════════════════════
-//  PROVIDERS
-// ═══════════════════════════════════════════════════════════
-function renderProvBtns(provs) {
-  const c = $('#prov-grp'); c.innerHTML = '';
-  provs.forEach(p => {
-    const b = document.createElement('button');
-    b.className = 'prov-btn' + (p === curProv ? ' active' : '');
-    b.textContent = p; b.dataset.p = p;
-    b.onclick = () => { curProv = p; $$('.prov-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); buildEpList(); if (allEps.length) loadEpisode(0); };
-    c.appendChild(b);
-  });
-}
-
-// ═══════════════════════════════════════════════════════════
 //  EPISODE LIST
 // ═══════════════════════════════════════════════════════════
 function buildEpList() {
-  const pd = curEps[curProv];
-  if (!pd) { $('#ep-list').innerHTML = '<div style="padding:14px;color:var(--muted);font-size:.8rem;">No episodes for this provider.</div>'; allEps = []; filteredEps = []; return; }
+  const pd = curEps['aniwatch'];
+  if (!pd) {
+    $('#ep-list').innerHTML = '<div style="padding:14px;color:var(--muted);font-size:.8rem;">No episodes.</div>';
+    allEps = []; filteredEps = []; return;
+  }
 
-  const eps = pd.episodes;
-  let byAudio;
-  if (eps && (eps.sub || eps.dub)) byAudio = eps;
-  else if (Array.isArray(eps)) byAudio = { sub: eps, dub: [] };
-  else byAudio = { sub: [], dub: [] };
+  const eps = pd.episodes || {};
+  const subList = Array.isArray(eps) ? eps : (eps.sub || []);
+  const dubList = Array.isArray(eps) ? eps : (eps.dub || []);
 
-  const hasSub = !!(byAudio.sub?.length), hasDub = !!(byAudio.dub?.length);
+  const hasSub = subList.length > 0;
+  const hasDub = dubList.length > 0;
+
   $('#btn-sub').classList.toggle('unavailable', !hasSub);
   $('#btn-dub').classList.toggle('unavailable', !hasDub);
 
-  // For aniwatch the same list covers both — always allow switching
-  const isAniwatch = curProv === 'aniwatch';
-  if (!isAniwatch) {
-    if (curAudio === 'dub' && !hasDub) { curAudio = 'sub'; $('#btn-sub').classList.add('active'); $('#btn-dub').classList.remove('active'); toast('No dub — switched to SUB'); }
-    if (curAudio === 'sub' && !hasSub && hasDub) { curAudio = 'dub'; $('#btn-dub').classList.add('active'); $('#btn-sub').classList.remove('active'); toast('No sub — switched to DUB'); }
-  }
+  // For aniwatch, sub and dub share the same episode list; audio is set at stream-fetch time
+  allEps = curAudio === 'dub' ? dubList : subList;
+  if (!allEps.length) allEps = subList.length ? subList : dubList;
 
-  allEps = byAudio[curAudio] || byAudio.sub || byAudio.dub || [];
   $('#ep-count').textContent = allEps.length + ' eps';
   filteredEps = allEps;
   renderEpItems();
@@ -657,6 +640,7 @@ async function loadEpisode(idx) {
   if (!allEps[idx]) return;
   curEpIdx = idx;
   const ep = allEps[idx];
+
   $$('.ep-item').forEach(el => el.classList.toggle('active', parseInt(el.dataset.i) === idx));
   const ae = $('.ep-item.active'); if (ae) ae.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   $('#btn-prev').disabled = idx === 0;
@@ -664,28 +648,27 @@ async function loadEpisode(idx) {
   hideSkipBtn(); showLoader('Fetching stream…'); hideErr();
 
   try {
-    // Build the correct path for the stream endpoint.
-    // ep.id = "watch/aniwatch/{showId}/sub/{episodeId}"
-    // We replace the audio segment (index 3) with curAudio.
-    let epPath = ep.id || '';
-    if (epPath.startsWith('watch/aniwatch/')) {
-      const parts = epPath.split('/');
-      parts[3] = curAudio; // set sub or dub
-      epPath = parts.join('/');
-    }
+    // ep.id is the raw hianime episodeId e.g. "kage-no-jitsuryokusha-18316?ep=123456"
+    // Pass it to the worker's /stream endpoint as a query param (URL-encoded)
+    const episodeId = ep.id;
+    if (!episodeId) throw new Error('Episode has no ID — cannot fetch stream');
 
-    const fetchUrl = proxyApi('/' + epPath.replace(/^\//, ''));
-    console.log('[Animura] stream URL:', fetchUrl);
+    const streamUrl = proxyUrl(`/stream?id=${encodeURIComponent(episodeId)}&category=${curAudio}`);
+    console.log('[Animura] fetching stream:', streamUrl);
 
-    const r = await fetch(fetchUrl);
+    const r = await fetch(streamUrl);
     if (!r.ok) {
       const body = await r.text().catch(() => '');
-      throw new Error(`${r.status}: ${body.slice(0, 120)}`);
+      throw new Error(`${r.status}: ${body.slice(0, 200)}`);
     }
     const d = await r.json();
-    const streams = d.streams || d.sources || [];
+    if (d.error) throw new Error(d.error);
+
+    const streams = d.streams || [];
     if (!streams.length) throw new Error('No streams returned');
-    curIntro = d.intro || null; curOutro = d.outro || null;
+
+    curIntro = d.intro || null;
+    curOutro = d.outro || null;
     playHLS(streams[0].url, d.subtitles || []);
   } catch (e) {
     console.error('[Animura] stream error:', e);
@@ -700,7 +683,7 @@ function playHLS(url, subs = []) {
     const hls = new Hls({ maxBufferLength: 30 });
     window._hls = hls; hls.loadSource(url); hls.attachMedia(v);
     hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
-    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) showErr('Playback error — try another source.'); });
+    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) showErr('Playback error — try reloading.'); });
   } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
     v.src = url; v.load(); v.play().catch(() => {});
   } else { showErr('HLS not supported — try Chrome or Firefox.'); return; }
@@ -799,7 +782,7 @@ function showPage(id){$$('.page').forEach(p=>p.classList.remove('active'));$('#'
 function showHome(){if(window._hls){window._hls.destroy();window._hls=null}$('#player').pause();showPage('home-page')}
 
 // ═══════════════════════════════════════════════════════════
-//  INIT — AniList works immediately, no proxy needed for home page
+//  INIT
 // ═══════════════════════════════════════════════════════════
 loadSpotlight();
 loadGrid('TRENDING_DESC', 1);
