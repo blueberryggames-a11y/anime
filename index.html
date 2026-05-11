@@ -335,6 +335,17 @@
     background: var(--accent); border: none; color: #fff;
     font-family: inherit; font-size: 0.8rem; cursor: pointer;
   }
+  #skip-btn {
+    position: absolute; bottom: 54px; right: 16px; z-index: 10;
+    padding: 8px 18px; border-radius: 6px;
+    background: rgba(20,20,30,0.88); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.18); color: #fff;
+    font-family: inherit; font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; display: none;
+    transition: background 0.15s, transform 0.15s;
+  }
+  #skip-btn:hover { background: var(--accent); transform: scale(1.04); }
+  #skip-btn.visible { display: block; }
 
   .ctrl-bar {
     display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
@@ -598,6 +609,7 @@
           <span id="err-text">Stream unavailable.</span>
           <button onclick="retryStream()">↺ Retry</button>
         </div>
+        <button id="skip-btn" onclick="skipSegment()"></button>
       </div>
 
       <!-- Controls bar -->
@@ -1021,6 +1033,8 @@ $('#ep-filter').addEventListener('input', e => {
 });
 
 // ─── LOAD EPISODE ─────────────────────────────────────────
+let curIntro = null, curOutro = null;
+
 async function loadEpisode(idx) {
   if (!allEps[idx]) return;
   curEpIdx = idx;
@@ -1029,12 +1043,15 @@ async function loadEpisode(idx) {
   const ae = $('.ep-item.active'); if (ae) ae.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   $('#btn-prev').disabled = idx === 0;
   $('#btn-next').disabled = idx >= allEps.length - 1;
+  hideSkipBtn();
 
   showLoader('Fetching stream…');
   hideErr();
   try {
-    const r = await fetch(api('/' + ep.id));
-    // FIX: check HTTP status before parsing JSON
+    // ep.id is a full path e.g. "watch/kiwi/178005/sub/animepahe-1"
+    // ensure it starts with / but never doubles up
+    const epPath = '/' + ep.id.replace(/^\//, '');
+    const r = await fetch(api(epPath));
     if (!r.ok) {
       const body = await r.text();
       throw new Error(`Server returned ${r.status}${body ? ': ' + body.slice(0, 60) : ''}`);
@@ -1042,6 +1059,8 @@ async function loadEpisode(idx) {
     const d = await r.json();
     const streams = d.streams || d.sources || [];
     if (!streams.length) throw new Error('No streams returned');
+    curIntro = d.intro || null;
+    curOutro = d.outro || null;
     playHLS(streams[0].url, d.subtitles || []);
   } catch(e) {
     showErr('Stream unavailable: ' + e.message + '. Try another Source.');
@@ -1069,6 +1088,31 @@ function playHLS(url, subs=[]) {
 }
 
 // FIX: switchAudio now guards against switching to an unavailable type
+// ─── SKIP INTRO / OUTRO ──────────────────────────────────
+function hideSkipBtn() {
+  const b = $('#skip-btn'); b.classList.remove('visible'); b._target = null;
+}
+function skipSegment() {
+  const v = $('#player'), b = $('#skip-btn');
+  if (b._target != null) { v.currentTime = b._target; }
+  hideSkipBtn();
+}
+// Poll video time to show skip button during intro/outro windows
+$('#player').addEventListener('timeupdate', () => {
+  const v = $('#player'), b = $('#skip-btn'), t = v.currentTime;
+  if (curIntro && t >= curIntro.start && t < curIntro.end - 1) {
+    b.textContent = '⏭ Skip Intro';
+    b._target = curIntro.end;
+    b.classList.add('visible');
+  } else if (curOutro && t >= curOutro.start && t < curOutro.end - 1) {
+    b.textContent = '⏭ Skip Outro';
+    b._target = curOutro.end;
+    b.classList.add('visible');
+  } else {
+    b.classList.remove('visible');
+  }
+});
+
 function switchAudio(type) {
   const pd = curEps[curProv];
   if (pd) {
