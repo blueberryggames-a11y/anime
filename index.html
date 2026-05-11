@@ -13,7 +13,6 @@
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--accent);border-radius:4px}
-
 #proxy-banner{background:linear-gradient(90deg,#100820,#081020);border-bottom:1px solid rgba(108,92,231,.3);padding:9px 22px;display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted);flex-wrap:wrap}
 #proxy-banner strong{color:var(--accent2)}#proxy-banner a{color:var(--accent2);font-size:.7rem}
 #proxy-input{flex:1;min-width:200px;max-width:380px;padding:5px 10px;border-radius:5px;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:.78rem;outline:none}
@@ -21,7 +20,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 #proxy-save{padding:5px 13px;border-radius:5px;background:var(--accent);border:none;color:#fff;font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer}
 #proxy-save:hover{background:var(--accent2)}
 #banner-x{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.95rem;padding:0 3px}
-
 nav{position:sticky;top:0;z-index:200;height:54px;display:flex;align-items:center;gap:14px;padding:0 22px;background:rgba(8,8,16,0.93);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;letter-spacing:2px;color:var(--accent2);cursor:pointer;flex-shrink:0;text-shadow:0 0 18px var(--glow)}
 .logo span{color:var(--accent)}
@@ -29,7 +27,7 @@ nav{position:sticky;top:0;z-index:200;height:54px;display:flex;align-items:cente
 .swrap input{width:100%;padding:7px 14px 7px 35px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.84rem;outline:none;transition:border .15s}
 .swrap input:focus{border-color:var(--accent)}.swrap input::placeholder{color:var(--muted)}
 .s-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
-.sdd{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.8);z-index:300;display:none}
+.sdd{position:absolute;top:calc(100%+6px);left:0;right:0;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.8);z-index:300;display:none}
 .sdd.open{display:block}
 .si{display:flex;gap:10px;align-items:center;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s}
 .si:last-child{border-bottom:none}.si:hover{background:var(--bg4)}
@@ -40,9 +38,7 @@ nav{position:sticky;top:0;z-index:200;height:54px;display:flex;align-items:cente
 .ntab:hover,.ntab.active{background:var(--bg3);color:var(--accent2)}
 .pbtn{padding:5px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:.72rem;font-family:inherit;transition:all .14s}
 .pbtn:hover{color:var(--accent2);border-color:rgba(162,155,254,.3)}.pbtn.ok{color:var(--green);border-color:rgba(85,239,196,.2)}
-
 .page{display:none}.page.active{display:block}
-
 .hero{position:relative;width:100%;height:450px;overflow:hidden}
 .hbg{position:absolute;inset:0;background-size:cover;background-position:center 25%;transition:background-image .5s;filter:brightness(.22) saturate(1.4)}
 .hbg::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,8,16,.99) 22%,rgba(8,8,16,.35) 62%,transparent),linear-gradient(to top,var(--bg) 0%,transparent 30%)}
@@ -85,7 +81,6 @@ nav{position:sticky;top:0;z-index:200;height:54px;display:flex;align-items:cente
 .pc{width:42px;height:42px;border-radius:50%;background:rgba(108,92,231,.9);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.2)}
 .skel{border-radius:var(--r);aspect-ratio:3/4;background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shim 1.3s infinite}
 @keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
-
 .wl{display:grid;grid-template-columns:1fr 316px;max-width:1380px;margin:0 auto}
 .pcol{border-right:1px solid var(--border);min-width:0}
 .pwrap{position:relative;width:100%;background:#000;aspect-ratio:16/9}
@@ -141,18 +136,12 @@ video#player{width:100%;height:100%;display:block;background:#000}
 .relcard img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:6px;display:block;margin-bottom:4px}
 .relct{font-size:.66rem;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .relcf{font-size:.59rem;color:var(--muted);margin-top:2px}
-
-/* provider badge */
-.provbadge{font-size:.6rem;color:var(--muted);font-family:'Space Mono',monospace;padding:0 3px}
-
-/* Debug panel */
+.srcbadge{font-size:.6rem;color:var(--muted);font-family:'Space Mono',monospace;padding:0 3px}
 #dbg{position:fixed;bottom:0;left:0;right:0;max-height:180px;overflow-y:auto;background:rgba(5,5,14,.95);font-family:'Space Mono',monospace;font-size:.62rem;color:#a29bfe;padding:6px 10px 24px;z-index:9000;display:none;border-top:1px solid var(--border)}
 #dbg.on{display:block}
 #dbg-toggle{position:fixed;bottom:6px;right:6px;z-index:9001;padding:3px 8px;border-radius:4px;background:var(--bg4);border:1px solid var(--border);color:var(--muted);font-size:.65rem;cursor:pointer;font-family:inherit}
-
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(65px);background:var(--bg3);border:1px solid var(--border);padding:8px 17px;border-radius:7px;font-size:.79rem;z-index:9999;transition:transform .26s;box-shadow:0 5px 18px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap}
 #toast.show{transform:translateX(-50%) translateY(0)}
-
 @media(max-width:900px){.wl{grid-template-columns:1fr}.eps{position:static;max-height:320px;border-left:none;border-top:1px solid var(--border)}}
 @media(max-width:600px){nav{padding:0 10px;gap:8px}.ntabs{display:none}.grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}.hero{height:280px}.hc{padding:0 14px 26px}.sec{padding:4px 12px 26px}.gstrip{padding:12px 12px 8px}}
 </style>
@@ -240,7 +229,7 @@ video#player{width:100%;height:100%;display:block;background:#000}
           <button class="cb active" id="btn-sub" onclick="swAudio('sub')">SUB</button>
           <button class="cb" id="btn-dub" onclick="swAudio('dub')">DUB</button>
         </div>
-        <span class="provbadge" id="prov-badge"></span>
+        <span class="srcbadge" id="src-badge"></span>
         <div class="csep"></div>
         <div class="nbtns">
           <button class="enav" id="btn-prev" onclick="prevEp()"><svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4v16H3V4h2z"/></svg>Prev</button>
@@ -274,52 +263,44 @@ function log(...a) {
 
 // ── PROXY ──────────────────────────────────────────────────────────────────────
 let PROXY = localStorage.getItem('animura_proxy') || '';
-
 function workerUrl(route, params) {
-  if (!PROXY) { showBanner(); throw new Error('No Worker URL — paste it in the banner above.'); }
-  const base = PROXY.replace(/\/$/, '');
+  if (!PROXY) { showBanner(); throw new Error('No Worker URL'); }
   const qs = new URLSearchParams(params).toString();
-  return `${base}${route}${qs ? '?' + qs : ''}`;
+  return `${PROXY.replace(/\/$/,'')}${route}${qs?'?'+qs:''}`;
 }
-
-// Proxy an m3u8 URL through /stream so segments get rewritten too
-function pStream(rawUrl) {
-  if (!PROXY) return rawUrl;
-  return workerUrl('/stream', { url: rawUrl });
-}
-
+function pStream(rawUrl) { return PROXY ? workerUrl('/stream', { url: rawUrl }) : rawUrl; }
 function saveProxy() {
   const v = document.getElementById('proxy-input').value.trim();
   if (!v) { toast('Paste Worker URL first!'); return; }
   PROXY = v; localStorage.setItem('animura_proxy', v);
   updatePBtn(); dismissBanner(); toast('✓ Saved!');
 }
-function dismissBanner() { document.getElementById('proxy-banner').style.display = 'none'; if (PROXY) localStorage.setItem('animura_bok','1'); }
-function showBanner()    { document.getElementById('proxy-banner').style.display = 'flex'; }
-function toggleBanner()  { const b = document.getElementById('proxy-banner'); b.style.display = b.style.display === 'none' ? 'flex' : 'none'; }
-function updatePBtn()    { const b = document.getElementById('pbtn'); b.textContent = PROXY ? '✓ Worker' : '⚙ Worker'; b.classList.toggle('ok', !!PROXY); }
-if (PROXY) { document.getElementById('proxy-input').value = PROXY; updatePBtn(); if (localStorage.getItem('animura_bok')) document.getElementById('proxy-banner').style.display = 'none'; }
+function dismissBanner() { document.getElementById('proxy-banner').style.display='none'; if(PROXY)localStorage.setItem('animura_bok','1'); }
+function showBanner()    { document.getElementById('proxy-banner').style.display='flex'; }
+function toggleBanner()  { const b=document.getElementById('proxy-banner'); b.style.display=b.style.display==='none'?'flex':'none'; }
+function updatePBtn()    { const b=document.getElementById('pbtn'); b.textContent=PROXY?'✓ Worker':'⚙ Worker'; b.classList.toggle('ok',!!PROXY); }
+if (PROXY) { document.getElementById('proxy-input').value=PROXY; updatePBtn(); if(localStorage.getItem('animura_bok'))document.getElementById('proxy-banner').style.display='none'; }
 
 // ── ANILIST ────────────────────────────────────────────────────────────────────
 const AL = 'https://graphql.anilist.co';
-async function gql(q, v = {}) {
-  const r = await fetch(AL, { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({query:q,variables:v}) });
-  if (!r.ok) throw new Error('AniList ' + r.status);
-  const { data, errors } = await r.json();
+async function gql(q, v={}) {
+  const r = await fetch(AL, {method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({query:q,variables:v})});
+  if (!r.ok) throw new Error('AniList '+r.status);
+  const {data,errors} = await r.json();
   if (errors?.length) throw new Error(errors[0].message);
   return data;
 }
-const F = `id idMal title{romaji english}description(asHtml:false)coverImage{extraLarge large medium}bannerImage format status seasonYear episodes averageScore genres studios{nodes{name isAnimationStudio}}`;
+const F = `id title{romaji english}description(asHtml:false)coverImage{extraLarge large}bannerImage format status seasonYear episodes averageScore genres`;
 async function aPage(vars) {
-  const s = vars.sort || 'TRENDING_DESC';
+  const s = vars.sort||'TRENDING_DESC';
   const q = `query($page:Int,$perPage:Int${vars.search!==undefined?',$search:String':''}${vars.genre?',$genre:String':''}${vars.season?',$season:MediaSeason,$year:Int':''}${vars.status?',$status:MediaStatus':''}){Page(page:$page,perPage:$perPage){pageInfo{hasNextPage}media(type:ANIME,sort:[${s}]${vars.search!==undefined?',search:$search':''}${vars.genre?',genre:$genre':''}${vars.season?',season:$season,seasonYear:$year':''}${vars.status?',status:$status':''}){${F}}}}`;
   const d = await gql(q, vars);
-  return { results: d.Page.media||[], hasNextPage: d.Page.pageInfo.hasNextPage };
+  return {results:d.Page.media||[],hasNextPage:d.Page.pageInfo.hasNextPage};
 }
 
 // ── UTILS ──────────────────────────────────────────────────────────────────────
-const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
-const strip = h => h ? h.replace(/<[^>]*>/g,'') : '';
+const $ = s=>document.querySelector(s), $$ = s=>document.querySelectorAll(s);
+const strip = h=>h?h.replace(/<[^>]*>/g,''):'';
 const FB = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='3' height='4'%3E%3Crect fill='%23141422' width='3' height='4'/%3E%3C/svg%3E";
 function toast(msg,ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
 
@@ -328,7 +309,7 @@ let spotlight=[], spIdx=0, spTimer;
 let curAnime=null, curAudio='sub', curEpIdx=0;
 let allEps=[], filteredEps=[];
 let curTab='TRENDING_DESC', curGenre='', curPage=1;
-let intro=null, outro=null, retryIdx=null;
+let retryIdx=null;
 
 // ── SPOTLIGHT ─────────────────────────────────────────────────────────────────
 async function loadSpotlight() {
@@ -336,7 +317,7 @@ async function loadSpotlight() {
 }
 function renderSpot(i) {
   const a=spotlight[i]; if(!a)return;
-  $('#hbg').style.backgroundImage=`url(${a.bannerImage||''})`;
+  $('#hbg').style.backgroundImage=`url(${a.bannerImage})`;
   $('#htitle').textContent=a.title?.english||a.title?.romaji||'';
   $('#hdesc').textContent=strip(a.description||'');
   const tc=$('#hchips'); tc.innerHTML='';
@@ -366,8 +347,7 @@ async function loadGrid(tab, page, genre) {
 }
 function mkCard(a) {
   const div=document.createElement('div'); div.className='card';
-  const img=a.coverImage?.large||FB;
-  div.innerHTML=`<img src="${img}" alt="" loading="lazy" onerror="this.src='${FB}'"><div class="cov"><div class="ct">${a.title?.english||a.title?.romaji||''}</div><div class="cm">${a.format||''} ${a.seasonYear||''}</div></div>${a.averageScore?`<div class="sb">★ ${(a.averageScore/10).toFixed(1)}</div>`:''} ${a.episodes?`<div class="eb">${a.episodes}ep</div>`:''}<div class="pov"><div class="pc"><svg width="15" height="15" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`;
+  div.innerHTML=`<img src="${a.coverImage?.large||FB}" alt="" loading="lazy" onerror="this.src='${FB}'"><div class="cov"><div class="ct">${a.title?.english||a.title?.romaji||''}</div><div class="cm">${a.format||''} ${a.seasonYear||''}</div></div>${a.averageScore?`<div class="sb">★ ${(a.averageScore/10).toFixed(1)}</div>`:''} ${a.episodes?`<div class="eb">${a.episodes}ep</div>`:''}<div class="pov"><div class="pc"><svg width="15" height="15" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`;
   div.onclick=()=>openAnime(a.id); return div;
 }
 function loadMore(){ curPage++; loadGrid(curTab,curPage,curGenre); }
@@ -395,7 +375,7 @@ async function openAnime(id, startIdx=0) {
   curAnime=null; allEps=[]; filteredEps=[]; curEpIdx=startIdx; curAudio='sub';
   $('#btn-sub').classList.add('active'); $('#btn-dub').classList.remove('active');
   $('#eplist').innerHTML='<div style="padding:18px;text-align:center;color:var(--muted);font-size:.76rem;">Loading…</div>';
-  $('#ainfo').innerHTML=''; $('#relsec').style.display='none'; $('#prov-badge').textContent='';
+  $('#ainfo').innerHTML=''; $('#relsec').style.display='none'; $('#src-badge').textContent='';
   setMsg('Fetching info…',true);
   const q=`query($id:Int){Media(id:$id,type:ANIME){${F}relations{edges{relationType node{id title{romaji english}coverImage{large}format}}}recommendations(sort:RATING_DESC,perPage:10){nodes{rating mediaRecommendation{id title{romaji english}coverImage{large}format}}}}}`;
   try { const d=await gql(q,{id}); curAnime=d.Media; renderInfo(); renderRel(); await loadEpList(id); }
@@ -403,53 +383,28 @@ async function openAnime(id, startIdx=0) {
 }
 
 // ── EPISODE LIST ──────────────────────────────────────────────────────────────
-// Uses the worker's /episodes route → miruro-api.vercel.app/episodes/{id}
+// Uses Consumet: GET /meta/anilist/info/{id}?provider=gogoanime
+// Each episode has .id (gogoanime episode ID), .number, .title
 async function loadEpList(id) {
-  let episodeData = null;
-
   try {
     const url = workerUrl('/episodes', { id });
-    log('episodes →', url.slice(0, 80));
+    log('episodes →', url.slice(0,80));
     const r = await fetch(url);
-    if (r.ok) {
-      episodeData = await r.json();
-      log('episodes ok, providers:', Object.keys(episodeData.providers || {}).join(', '));
+    const data = await r.json();
+    log('episodes response:', JSON.stringify(data).slice(0,200));
+
+    if (data.episodes?.length) {
+      allEps = data.episodes;
+      log('got', allEps.length, 'eps, first ID:', allEps[0]?.id);
     } else {
-      log('episodes HTTP', r.status);
+      throw new Error(data.error || 'No episodes returned');
     }
   } catch(e) {
-    log('episodes fetch failed:', e.message);
-  }
-
-  // Build episode list from best provider
-  const PREF = ['kiwi', 'arc', 'zoro', 'jet'];
-  let epList = [];
-
-  if (episodeData?.providers) {
-    const providers = episodeData.providers;
-    const ordered = [...PREF.filter(p => providers[p]), ...Object.keys(providers).filter(p => !PREF.includes(p))];
-    for (const prov of ordered) {
-      const subEps = providers[prov]?.episodes?.sub || providers[prov]?.episodes?.dub || [];
-      if (subEps.length) {
-        epList = subEps.map(ep => ({
-          number: ep.number,
-          title:  ep.title || `Episode ${ep.number}`,
-          image:  ep.image || null,
-        }));
-        log('using provider', prov, '→', epList.length, 'eps');
-        break;
-      }
-    }
-  }
-
-  // Fallback: stub from AniList episode count
-  if (!epList.length) {
+    log('episodes failed:', e.message, '— using stubs');
     const cnt = curAnime?.episodes || 1;
-    log('stub', cnt, 'eps');
-    epList = Array.from({length: cnt}, (_, i) => ({ number: i+1, title: `Episode ${i+1}` }));
+    allEps = Array.from({length:cnt}, (_,i) => ({ id:null, number:i+1, title:`Episode ${i+1}` }));
   }
 
-  allEps = epList;
   filteredEps = allEps;
   $('#epct').textContent = allEps.length + ' eps';
   renderEpItems();
@@ -465,69 +420,63 @@ function renderEpItems(){
 $('#epf').addEventListener('input',e=>{ const q=e.target.value.toLowerCase().trim(); filteredEps=q?allEps.filter(ep=>ep.title.toLowerCase().includes(q)||String(ep.number).includes(q)):allEps; renderEpItems(); });
 
 // ── LOAD EPISODE ──────────────────────────────────────────────────────────────
-async function loadEp(idx){
-  if(!allEps[idx])return;
+async function loadEp(idx) {
+  if (!allEps[idx]) return;
   curEpIdx=idx; retryIdx=idx;
-  const ep=allEps[idx];
+  const ep = allEps[idx];
   $$('.epi').forEach(el=>el.classList.toggle('active',parseInt(el.dataset.i)===idx));
-  const ae=$('.epi.active'); if(ae)ae.scrollIntoView({block:'nearest',behavior:'smooth'});
+  const ae=$('.epi.active'); if(ae) ae.scrollIntoView({block:'nearest',behavior:'smooth'});
   $('#btn-prev').disabled=idx===0; $('#btn-next').disabled=idx>=allEps.length-1;
-  intro=null; outro=null; $('#skip-btn').classList.remove('on');
-  $('#prov-badge').textContent='';
+  $('#src-badge').textContent='';
   setMsg(`Loading ep ${ep.number}…`,true);
-  try {
-    const { url, provider, introData, outroData } = await getStream(ep.number, curAudio);
-    if (!url) throw new Error('No stream URL found. Open debug panel for details.');
-    if (provider) $('#prov-badge').textContent = provider;
-    if (introData) intro = introData;
-    if (outroData) outro = outroData;
-    log('▶', url.slice(0,90));
-    playHLS(url);
-  } catch(e) {
-    log('stream error:', e.message);
-    setMsg(null, false, true, e.message, ()=>retryIdx!==null&&loadEp(retryIdx));
+
+  // If no gogoanime ID, dub switch might have changed provider — reload episode list
+  let epId = ep.id;
+  if (!epId) {
+    setMsg(null,false,true,'No stream ID for this episode — the anime may not be on GogoAnime.');
+    return;
   }
-}
 
-// ── GET STREAM ────────────────────────────────────────────────────────────────
-// Calls worker /stream-url → miruro-api 3-step flow
-// Returns { url, provider, introData, outroData }
-async function getStream(epNumber, cat) {
-  const id = curAnime.id;
+  // For dub, Consumet appends "-dub" to the episode ID
+  if (curAudio === 'dub') {
+    // Replace "episode-N" → try dub variant
+    epId = epId.replace(/(-episode-\d+)$/, '-dub$1');
+    // If already has -dub don't double it
+    if (epId.includes('-dub-dub')) epId = epId.replace('-dub-dub', '-dub');
+  }
+
+  log('loadEp', ep.number, 'epId:', epId);
 
   try {
-    const dest = workerUrl('/stream-url', { id, ep: epNumber, cat });
-    log('stream-url →', dest.slice(0, 90));
-    const r = await fetch(dest);
+    const url = workerUrl('/stream-url', { epId });
+    log('stream-url →', url.slice(0,90));
+    const r = await fetch(url);
     const data = await r.json();
-    log('stream-url response:', JSON.stringify(data).slice(0, 200));
+    log('stream-url resp:', JSON.stringify(data).slice(0,200));
 
     if (data.url) {
-      return {
-        url: data.url,
-        provider: data.provider || null,
-        introData: data.intro || null,
-        outroData: data.outro || null,
-      };
+      const qual = data.quality || '';
+      $('#src-badge').textContent = qual ? `${qual}` : 'gogoanime';
+      playHLS(data.url, data.headers);
+    } else {
+      throw new Error(data.error || 'No URL in response');
     }
-
-    if (data.error) throw new Error(data.error);
   } catch(e) {
-    log('stream-url call failed:', e.message);
-    throw e;
+    log('stream error:', e.message);
+    setMsg(null,false,true,e.message, ()=>retryIdx!==null&&loadEp(retryIdx));
   }
-
-  throw new Error('No URL in response');
 }
 
 // ── HLS PLAYER ────────────────────────────────────────────────────────────────
-function playHLS(rawUrl){
-  // Route through worker /stream so m3u8 segments get proxied (CORS fix)
+function playHLS(rawUrl, extraHeaders) {
   const url = pStream(rawUrl);
   const v=$('#player'); hideMsg();
   if(window._hls){window._hls.destroy();window._hls=null;}
   if(Hls.isSupported()){
-    const hls=new Hls({maxBufferLength:30,enableWorker:false});
+    const hls=new Hls({maxBufferLength:30,enableWorker:false,xhrSetup:(xhr,u)=>{
+      // Some Gogo CDNs need Referer
+      if(extraHeaders?.Referer) xhr.setRequestHeader('Referer',extraHeaders.Referer);
+    }});
     window._hls=hls; hls.loadSource(url); hls.attachMedia(v);
     hls.on(Hls.Events.MANIFEST_PARSED,()=>{ log('manifest ok'); v.play().catch(()=>{}); });
     hls.on(Hls.Events.ERROR,(_,d)=>{ log('hls err',d.type,d.details,d.fatal); if(d.fatal)setMsg(null,false,true,'Playback error — retry or switch SUB↔DUB.',()=>retryIdx!==null&&loadEp(retryIdx)); });
@@ -545,10 +494,7 @@ function nextEp(){ if(curEpIdx<allEps.length-1)loadEp(curEpIdx+1); }
 // ── SKIP ──────────────────────────────────────────────────────────────────────
 let skipTarget=null;
 $('#player').addEventListener('timeupdate',()=>{
-  const v=$('#player'),t=v.currentTime,b=$('#skip-btn');
-  if(intro&&t>=intro.start&&t<intro.end-1){ b.textContent='⏭ Skip Intro'; skipTarget=intro.end; b.classList.add('on'); }
-  else if(outro&&t>=outro.start&&t<outro.end-1){ b.textContent='⏭ Skip Outro'; skipTarget=outro.end; b.classList.add('on'); }
-  else{ b.classList.remove('on'); skipTarget=null; }
+  // (skip times could be fetched from aniskip.com if desired)
 });
 function doSkip(){ if(skipTarget!=null){$('#player').currentTime=skipTarget;$('#skip-btn').classList.remove('on');} }
 
