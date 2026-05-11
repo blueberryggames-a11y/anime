@@ -131,7 +131,6 @@
     padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);
     background: transparent; color: var(--muted); cursor: pointer;
     font-size: 0.75rem; font-family: inherit; transition: all var(--transition);
-    title: 'Configure proxy';
   }
   .nav-proxy-btn:hover { color: var(--accent); border-color: var(--accent); }
   .nav-proxy-btn.ok { color: var(--green); border-color: rgba(74,222,128,0.3); }
@@ -351,6 +350,13 @@
   }
   .ctrl-btn:hover, .ctrl-btn.active {
     background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+  /* FIX: dim unavailable audio type */
+  .ctrl-btn.unavailable {
+    opacity: 0.35; cursor: not-allowed;
+  }
+  .ctrl-btn.unavailable:hover {
+    background: var(--bg3); border-color: var(--border); color: var(--text);
   }
   .ctrl-sep { width: 1px; height: 20px; background: var(--border); }
   .nav-btns { display: flex; gap: 8px; margin-left: auto; }
@@ -643,8 +649,6 @@
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────
-// Replace this with your Cloudflare Worker URL after deploying.
-// It will also be saved/loaded from localStorage automatically.
 let PROXY = localStorage.getItem('animura_proxy') || '';
 
 function api(path) {
@@ -680,7 +684,6 @@ function updateProxyBtn() {
   if (PROXY) { btn.classList.add('ok'); btn.textContent = '✓ Proxy'; }
   else { btn.classList.remove('ok'); btn.textContent = '⚙ Proxy'; }
 }
-// Pre-fill input if saved
 if (PROXY) {
   document.getElementById('proxy-input').value = PROXY;
   updateProxyBtn();
@@ -693,7 +696,6 @@ if (PROXY) {
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const stripHtml = h => h ? h.replace(/<[^>]*>/g,'') : '';
-const pImg = u => u || '';
 
 function toast(msg, ms=2800) {
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
@@ -836,149 +838,283 @@ async function doSearch(q) {
 async function openAnime(id, startIdx=0) {
   if (!PROXY) { showBanner(); toast('Set your proxy URL first!'); return; }
   showPage('watch-page');
-  curEpIdx=startIdx; curProv='kiwi'; curAudio='sub';
+  curEpIdx = startIdx; curProv = 'kiwi'; curAudio = 'sub';
   $('#btn-sub').classList.add('active'); $('#btn-dub').classList.remove('active');
-  $('#ep-list').innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.8rem;">Loading…</div>';
-  $('#anime-info').innerHTML=''; $('#related-section').innerHTML='';
+  $('#btn-sub').classList.remove('unavailable'); $('#btn-dub').classList.remove('unavailable');
+  $('#ep-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.8rem;">Loading…</div>';
+  $('#anime-info').innerHTML = ''; $('#related-section').innerHTML = '';
   showLoader('Fetching anime info…');
 
+  // FIX: fetch info and episodes independently so a 500 on episodes
+  // doesn't crash the whole page — info + player still work.
+  let infoOk = false, epOk = false;
+
   try {
-    const [infoR, epR] = await Promise.all([
-      fetch(api(`/info/${id}`)), fetch(api(`/episodes/${id}`))
-    ]);
+    const infoR = await fetch(api(`/info/${id}`));
+    if (!infoR.ok) throw new Error(`Info ${infoR.status}`);
     curAnime = await infoR.json();
-    const epData = await epR.json();
-    curEps = epData.providers || {};
-
-    const provs = Object.keys(curEps);
-    curProv = provs.includes('kiwi') ? 'kiwi' : (provs[0]||'');
-
-    renderProvBtns(provs);
-    buildEpList();
+    infoOk = true;
     renderAnimeInfo();
     renderRelated();
-    loadEpisode(startIdx);
-  } catch(e) { showErr('Failed to load: '+e.message); }
+  } catch(e) {
+    console.warn('Info fetch failed:', e.message);
+    curAnime = null;
+  }
+
+  try {
+    const epR = await fetch(api(`/episodes/${id}`));
+    if (!epR.ok) {
+      // FIX: read body as text first so a non-JSON 500 doesn't throw
+      const body = await epR.text();
+      throw new Error(`Episodes ${epR.status}: ${body.slice(0, 80)}`);
+    }
+    const epData = await epR.json();
+    curEps = epData.providers || {};
+    epOk = true;
+  } catch(e) {
+    console.warn('Episodes fetch failed:', e.message);
+    curEps = {};
+    // FIX: show a friendly error in the sidebar instead of crashing
+    $('#ep-list').innerHTML = `
+      <div style="padding:16px 14px;">
+        <div style="color:var(--red);font-size:0.8rem;margin-bottom:8px;">
+          ⚠ Episodes unavailable
+        </div>
+        <div style="color:var(--muted);font-size:0.75rem;line-height:1.5;">
+          The episode source returned an error. Try a different source or come back later.
+        </div>
+        <button onclick="openAnime(${id})" style="
+          margin-top:10px;padding:6px 14px;border-radius:6px;
+          background:var(--accent);border:none;color:#fff;
+          font-family:inherit;font-size:0.75rem;cursor:pointer;">
+          ↺ Retry
+        </button>
+      </div>`;
+    showErr('Episodes could not be loaded. See sidebar for details.');
+    return;
+  }
+
+  const provs = Object.keys(curEps);
+  curProv = provs.includes('kiwi') ? 'kiwi' : (provs[0] || '');
+
+  renderProvBtns(provs);
+  buildEpList();
+  loadEpisode(startIdx);
 }
 
 // ─── PROVIDERS ────────────────────────────────────────────
 function renderProvBtns(provs) {
-  const c = $('#prov-grp'); c.innerHTML='';
+  const c = $('#prov-grp'); c.innerHTML = '';
   provs.forEach(p => {
-    const b=document.createElement('button'); b.className='prov-btn'+(p===curProv?' active':'');
-    b.textContent=p; b.dataset.p=p;
-    b.onclick = () => { curProv=p; $$('.prov-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); buildEpList(); loadEpisode(curEpIdx); };
+    const b = document.createElement('button');
+    b.className = 'prov-btn' + (p === curProv ? ' active' : '');
+    b.textContent = p; b.dataset.p = p;
+    b.onclick = () => {
+      curProv = p;
+      $$('.prov-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      buildEpList();
+      loadEpisode(curEpIdx);
+    };
     c.appendChild(b);
   });
 }
 
 // ─── EPISODE LIST ─────────────────────────────────────────
+// FIX: check which audio types are actually available for the current provider
+// and update the SUB/DUB buttons accordingly. Fall back gracefully.
 function buildEpList() {
   const pd = curEps[curProv];
-  if (!pd) { $('#ep-list').innerHTML='<div style="padding:14px;color:var(--muted);font-size:0.8rem;">No episodes for this provider.</div>'; return; }
-  allEps = pd.episodes?.[curAudio] || pd.episodes?.sub || [];
-  $('#ep-count').textContent = allEps.length+' eps';
+  if (!pd) {
+    $('#ep-list').innerHTML = '<div style="padding:14px;color:var(--muted);font-size:0.8rem;">No episodes for this provider.</div>';
+    allEps = []; filteredEps = [];
+    updateAudioBtns({});
+    return;
+  }
+
+  // Normalise: support both pd.episodes.sub / pd.episodes.dub
+  // and legacy flat pd.episodes array
+  const epsByAudio = pd.episodes && (pd.episodes.sub || pd.episodes.dub)
+    ? pd.episodes
+    : { sub: Array.isArray(pd.episodes) ? pd.episodes : [] };
+
+  const hasSub = !!(epsByAudio.sub && epsByAudio.sub.length);
+  const hasDub = !!(epsByAudio.dub && epsByAudio.dub.length);
+
+  updateAudioBtns({ hasSub, hasDub });
+
+  // If selected audio type has no episodes, fall back
+  if (curAudio === 'dub' && !hasDub) {
+    if (hasSub) {
+      curAudio = 'sub';
+      $('#btn-sub').classList.add('active');
+      $('#btn-dub').classList.remove('active');
+      toast('No dub available — switched to SUB');
+    }
+  }
+  if (curAudio === 'sub' && !hasSub) {
+    if (hasDub) {
+      curAudio = 'dub';
+      $('#btn-dub').classList.add('active');
+      $('#btn-sub').classList.remove('active');
+      toast('No sub available — switched to DUB');
+    }
+  }
+
+  allEps = epsByAudio[curAudio] || epsByAudio.sub || [];
+  $('#ep-count').textContent = allEps.length + ' eps';
   filteredEps = allEps;
   renderEpItems();
 }
+
+// FIX: visually dim audio buttons that have no content
+function updateAudioBtns({ hasSub, hasDub }) {
+  const subBtn = $('#btn-sub');
+  const dubBtn = $('#btn-dub');
+  if (hasSub === undefined) {
+    subBtn.classList.remove('unavailable');
+    dubBtn.classList.remove('unavailable');
+    return;
+  }
+  subBtn.classList.toggle('unavailable', !hasSub);
+  dubBtn.classList.toggle('unavailable', !hasDub);
+  subBtn.title = hasSub ? '' : 'No subtitled version available';
+  dubBtn.title = hasDub ? '' : 'No dubbed version available';
+}
+
 function renderEpItems() {
-  const list=$('#ep-list'); list.innerHTML='';
-  if (!filteredEps.length) { list.innerHTML='<div style="padding:14px;color:var(--muted);font-size:0.8rem;">No episodes.</div>'; return; }
+  const list = $('#ep-list'); list.innerHTML = '';
+  if (!filteredEps.length) {
+    list.innerHTML = '<div style="padding:14px;color:var(--muted);font-size:0.8rem;">No episodes.</div>';
+    return;
+  }
   const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='50'%3E%3Crect fill='%231e1e28' width='88' height='50'/%3E%3C/svg%3E";
   filteredEps.forEach(ep => {
     const realIdx = allEps.indexOf(ep);
-    const div=document.createElement('div'); div.className='ep-item'+(realIdx===curEpIdx?' active':''); div.dataset.i=realIdx;
-    const img = ep.image||curAnime?.coverImage?.large||fallback;
-    div.innerHTML=`
+    const div = document.createElement('div');
+    div.className = 'ep-item' + (realIdx === curEpIdx ? ' active' : '');
+    div.dataset.i = realIdx;
+    const img = ep.image || curAnime?.coverImage?.large || fallback;
+    div.innerHTML = `
       <div class="ep-thumb-wrap">
         <img src="${img}" loading="lazy" onerror="this.src='${fallback}'">
-        <span class="ep-num-badge">EP ${ep.number||realIdx+1}</span>
+        <span class="ep-num-badge">EP ${ep.number || realIdx + 1}</span>
       </div>
       <div class="ep-text">
-        <div class="ep-text-title">${ep.title||`Episode ${ep.number||realIdx+1}`}</div>
-        <div class="ep-text-meta">${ep.airDate||''} ${ep.duration?'· '+Math.round(ep.duration/60)+'m':''}</div>
+        <div class="ep-text-title">${ep.title || `Episode ${ep.number || realIdx + 1}`}</div>
+        <div class="ep-text-meta">${ep.airDate || ''} ${ep.duration ? '· ' + Math.round(ep.duration / 60) + 'm' : ''}</div>
       </div>`;
     div.onclick = () => loadEpisode(realIdx);
     list.appendChild(div);
   });
-  const active=$('.ep-item.active');
-  if(active) active.scrollIntoView({block:'nearest',behavior:'smooth'});
+  const active = $('.ep-item.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
+
 $('#ep-filter').addEventListener('input', e => {
-  const q=e.target.value.toLowerCase();
-  filteredEps = q ? allEps.filter(ep=>(ep.title||'').toLowerCase().includes(q)||String(ep.number||'').includes(q)) : allEps;
+  const q = e.target.value.toLowerCase();
+  filteredEps = q
+    ? allEps.filter(ep => (ep.title || '').toLowerCase().includes(q) || String(ep.number || '').includes(q))
+    : allEps;
   renderEpItems();
 });
 
 // ─── LOAD EPISODE ─────────────────────────────────────────
 async function loadEpisode(idx) {
   if (!allEps[idx]) return;
-  curEpIdx=idx;
-  const ep=allEps[idx];
-  $$('.ep-item').forEach(el=>el.classList.toggle('active',parseInt(el.dataset.i)===idx));
-  const ae=$('.ep-item.active'); if(ae) ae.scrollIntoView({block:'nearest',behavior:'smooth'});
-  $('#btn-prev').disabled = idx===0;
-  $('#btn-next').disabled = idx>=allEps.length-1;
+  curEpIdx = idx;
+  const ep = allEps[idx];
+  $$('.ep-item').forEach(el => el.classList.toggle('active', parseInt(el.dataset.i) === idx));
+  const ae = $('.ep-item.active'); if (ae) ae.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  $('#btn-prev').disabled = idx === 0;
+  $('#btn-next').disabled = idx >= allEps.length - 1;
 
   showLoader('Fetching stream…');
   hideErr();
   try {
-    const r = await fetch(api('/'+ep.id));
+    const r = await fetch(api('/' + ep.id));
+    // FIX: check HTTP status before parsing JSON
+    if (!r.ok) {
+      const body = await r.text();
+      throw new Error(`Server returned ${r.status}${body ? ': ' + body.slice(0, 60) : ''}`);
+    }
     const d = await r.json();
-    const streams = d.streams||d.sources||[];
+    const streams = d.streams || d.sources || [];
     if (!streams.length) throw new Error('No streams returned');
-    playHLS(streams[0].url, d.subtitles||[]);
+    playHLS(streams[0].url, d.subtitles || []);
   } catch(e) {
-    showErr('Stream unavailable: '+e.message+'. Try another Source.');
+    showErr('Stream unavailable: ' + e.message + '. Try another Source.');
   }
 }
 
 function playHLS(url, subs=[]) {
-  const v=$('#player'); hideLoader(); hideErr();
-  if(Hls.isSupported()) {
-    if(window._hls){window._hls.destroy();}
-    const hls=new Hls({maxBufferLength:30});
-    window._hls=hls; hls.loadSource(url); hls.attachMedia(v);
-    hls.on(Hls.Events.MANIFEST_PARSED,()=>v.play().catch(()=>{}));
-    hls.on(Hls.Events.ERROR,(_,d)=>{if(d.fatal)showErr('Stream error.');});
-  } else if(v.canPlayType('application/vnd.apple.mpegurl')) {
-    v.src=url; v.load(); v.play().catch(()=>{});
+  const v = $('#player'); hideLoader(); hideErr();
+  if (Hls.isSupported()) {
+    if (window._hls) { window._hls.destroy(); }
+    const hls = new Hls({ maxBufferLength: 30 });
+    window._hls = hls; hls.loadSource(url); hls.attachMedia(v);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
+    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) showErr('Stream error.'); });
+  } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+    v.src = url; v.load(); v.play().catch(() => {});
   } else { showErr('HLS not supported in this browser.'); return; }
-  while(v.querySelector('track')) v.querySelector('track').remove();
-  subs.forEach((s,i)=>{const t=document.createElement('track');t.kind='subtitles';t.label=s.label||'Sub';t.src=s.file||s.url||'';t.default=i===0;v.appendChild(t);});
+  while (v.querySelector('track')) v.querySelector('track').remove();
+  subs.forEach((s, i) => {
+    const t = document.createElement('track');
+    t.kind = 'subtitles'; t.label = s.label || 'Sub';
+    t.src = s.file || s.url || ''; t.default = i === 0;
+    v.appendChild(t);
+  });
 }
 
+// FIX: switchAudio now guards against switching to an unavailable type
 function switchAudio(type) {
-  curAudio=type; $('#btn-sub').classList.toggle('active',type==='sub'); $('#btn-dub').classList.toggle('active',type==='dub');
-  buildEpList(); loadEpisode(curEpIdx);
+  const pd = curEps[curProv];
+  if (pd) {
+    const epsByAudio = pd.episodes && (pd.episodes.sub || pd.episodes.dub)
+      ? pd.episodes
+      : { sub: Array.isArray(pd.episodes) ? pd.episodes : [] };
+    const available = epsByAudio[type] && epsByAudio[type].length > 0;
+    if (!available) {
+      toast(`No ${type.toUpperCase()} version available for this source`);
+      return;
+    }
+  }
+  curAudio = type;
+  $('#btn-sub').classList.toggle('active', type === 'sub');
+  $('#btn-dub').classList.toggle('active', type === 'dub');
+  buildEpList();
+  // Reset to ep 0 when switching audio since indices may differ
+  loadEpisode(0);
 }
-function prevEp(){if(curEpIdx>0) loadEpisode(curEpIdx-1);}
-function nextEp(){if(curEpIdx<allEps.length-1) loadEpisode(curEpIdx+1);}
-function retryStream(){loadEpisode(curEpIdx);}
+
+function prevEp() { if (curEpIdx > 0) loadEpisode(curEpIdx - 1); }
+function nextEp() { if (curEpIdx < allEps.length - 1) loadEpisode(curEpIdx + 1); }
+function retryStream() { loadEpisode(curEpIdx); }
 
 // ─── PLAYER UI ────────────────────────────────────────────
-function showLoader(msg='Loading…'){const l=$('#player-loader');l.style.display='flex';$('#loader-text').textContent=msg;}
-function hideLoader(){$('#player-loader').style.display='none';}
-function showErr(msg){hideLoader();const e=$('#player-err');e.style.display='flex';$('#err-text').textContent=msg;}
-function hideErr(){$('#player-err').style.display='none';}
+function showLoader(msg='Loading…') { const l=$('#player-loader'); l.style.display='flex'; $('#loader-text').textContent=msg; }
+function hideLoader() { $('#player-loader').style.display='none'; }
+function showErr(msg) { hideLoader(); const e=$('#player-err'); e.style.display='flex'; $('#err-text').textContent=msg; }
+function hideErr() { $('#player-err').style.display='none'; }
 
 // ─── ANIME INFO ───────────────────────────────────────────
 function renderAnimeInfo() {
-  const a=curAnime; if(!a) return;
-  const title=a.title?.english||a.title?.romaji||'';
-  const img=a.coverImage?.large||a.coverImage?.medium||'';
-  const desc=stripHtml(a.description||'No description.');
-  const score=a.averageScore; const eps=a.episodes||'?';
-  const status=a.status||''; const year=a.seasonYear||'';
-  const scoreColor=score>=80?'var(--green)':score>=60?'#facc15':'var(--red)';
-  $('#anime-info').innerHTML=`
+  const a = curAnime; if (!a) return;
+  const title = a.title?.english || a.title?.romaji || '';
+  const img = a.coverImage?.large || a.coverImage?.medium || '';
+  const desc = stripHtml(a.description || 'No description.');
+  const score = a.averageScore; const eps = a.episodes || '?';
+  const status = a.status || ''; const year = a.seasonYear || '';
+  const scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? '#facc15' : 'var(--red)';
+  $('#anime-info').innerHTML = `
     <div class="ai-head">
       <div class="ai-poster"><img src="${img}" alt="${title}"></div>
       <div class="ai-meta">
         <div class="ai-title">${title}</div>
         <div class="ai-tags">${(a.genres||[]).slice(0,5).map(g=>`<span class="tag">${g}</span>`).join('')}</div>
         <div class="ai-stats">
-          ${score?`<div class="ai-stat"><div class="ai-stat-val" style="color:${scoreColor}">★ ${(score/10).toFixed(1)}</div><div class="ai-stat-lbl">Score</div></div>`:''}
+          ${score ? `<div class="ai-stat"><div class="ai-stat-val" style="color:${scoreColor}">★ ${(score/10).toFixed(1)}</div><div class="ai-stat-lbl">Score</div></div>` : ''}
           <div class="ai-stat"><div class="ai-stat-val">${eps}</div><div class="ai-stat-lbl">Episodes</div></div>
           <div class="ai-stat"><div class="ai-stat-val">${year}</div><div class="ai-stat-lbl">Year</div></div>
           <div class="ai-stat"><div class="ai-stat-val" style="font-size:0.72rem">${status}</div><div class="ai-stat-lbl">Status</div></div>
@@ -988,22 +1124,26 @@ function renderAnimeInfo() {
     <div class="ai-desc collapsed" id="ai-desc">${desc}</div>
     <button class="expand-btn" onclick="toggleDesc()">Show more ↓</button>`;
 }
-function toggleDesc(){const d=$('#ai-desc'),b=d.nextElementSibling;const c=d.classList.toggle('collapsed');b.textContent=c?'Show more ↓':'Show less ↑';}
+function toggleDesc() {
+  const d = $('#ai-desc'), b = d.nextElementSibling;
+  const c = d.classList.toggle('collapsed');
+  b.textContent = c ? 'Show more ↓' : 'Show less ↑';
+}
 
 // ─── RELATED ──────────────────────────────────────────────
-function renderRelated(){
-  const a=curAnime; if(!a) return;
-  const items=[...(a.relations||[]).slice(0,6),...(a.recommendations||[]).slice(0,4)];
-  if(!items.length){$('#related-section').innerHTML='';return;}
-  const fallback="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='147'%3E%3Crect fill='%2318181f' width='110' height='147'/%3E%3C/svg%3E";
-  $('#related-section').innerHTML=`
+function renderRelated() {
+  const a = curAnime; if (!a) return;
+  const items = [...(a.relations||[]).slice(0,6), ...(a.recommendations||[]).slice(0,4)];
+  if (!items.length) { $('#related-section').innerHTML=''; return; }
+  const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='147'%3E%3Crect fill='%2318181f' width='110' height='147'/%3E%3C/svg%3E";
+  $('#related-section').innerHTML = `
     <div class="section-title">Related & Recommended</div>
     <div class="related-scroll">
-      ${items.map(r=>{
-        const id=r.id||r.mediaId;
-        const t=r.title?.english||r.title?.romaji||r.title||'';
-        const img=r.coverImage?.large||r.coverImage?.medium||r.image||fallback;
-        const type=r.relationType||r.format||'';
+      ${items.map(r => {
+        const id = r.id || r.mediaId;
+        const t = r.title?.english || r.title?.romaji || r.title || '';
+        const img = r.coverImage?.large || r.coverImage?.medium || r.image || fallback;
+        const type = r.relationType || r.format || '';
         return `<div class="rel-card" onclick="openAnime(${id})">
           <img src="${img}" loading="lazy" onerror="this.src='${fallback}'">
           <div class="rel-card-title">${t}</div>
@@ -1014,22 +1154,22 @@ function renderRelated(){
 }
 
 // ─── PAGE NAV ─────────────────────────────────────────────
-function showPage(id){
-  $$('.page').forEach(p=>p.classList.remove('active'));
+function showPage(id) {
+  $$('.page').forEach(p => p.classList.remove('active'));
   $('#'+id).classList.add('active');
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
 }
-function showHome(){
-  if(window._hls){window._hls.destroy();window._hls=null;}
+function showHome() {
+  if (window._hls) { window._hls.destroy(); window._hls = null; }
   $('#player').pause();
   showPage('home-page');
 }
 
 // ─── INIT ─────────────────────────────────────────────────
-async function init(){
-  if(!PROXY) return;
+async function init() {
+  if (!PROXY) return;
   loadSpotlight();
-  loadGrid('trending',1);
+  loadGrid('trending', 1);
 }
 init();
 </script>
