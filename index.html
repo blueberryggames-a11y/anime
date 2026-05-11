@@ -320,7 +320,7 @@ async function gql(q, v = {}) {
   return json.data;
 }
 
-const F = `id title{romaji english}description(asHtml:false)coverImage{extraLarge large}bannerImage format status seasonYear episodes averageScore genres`;
+const F = `id title{romaji english} description(asHtml:false) coverImage{extraLarge large} bannerImage format status seasonYear episodes averageScore genres`;
 
 async function aPage(vars) {
   const sort   = vars.sort   || 'TRENDING_DESC';
