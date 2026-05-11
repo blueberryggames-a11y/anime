@@ -858,7 +858,8 @@ async function openAnime(id, startIdx=0) {
     renderRelated();
   } catch(e) {
     console.warn('Info fetch failed:', e.message);
-    curAnime = null;
+    // Don't null curAnime if we already got data — only clear on HTTP error
+    if (!curAnime) curAnime = null;
   }
 
   try {
@@ -1133,7 +1134,15 @@ function toggleDesc() {
 // ─── RELATED ──────────────────────────────────────────────
 function renderRelated() {
   const a = curAnime; if (!a) return;
-  const items = [...(a.relations||[]).slice(0,6), ...(a.recommendations||[]).slice(0,4)];
+  // relations may be an array or object map like { SEQUEL: [...], PREQUEL: [...] }
+  let relArr = [];
+  if (Array.isArray(a.relations)) {
+    relArr = a.relations;
+  } else if (a.relations && typeof a.relations === 'object') {
+    relArr = Object.values(a.relations).flat().filter(Boolean);
+  }
+  const recArr = Array.isArray(a.recommendations) ? a.recommendations : [];
+  const items = [...relArr.slice(0,6), ...recArr.slice(0,4)];
   if (!items.length) { $('#related-section').innerHTML=''; return; }
   const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='147'%3E%3Crect fill='%2318181f' width='110' height='147'/%3E%3C/svg%3E";
   $('#related-section').innerHTML = `
