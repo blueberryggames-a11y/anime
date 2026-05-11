@@ -536,32 +536,33 @@ async function openAnime(id, startIdx = 0) {
 
 // ── EPISODE LIST ──────────────────────────────────────────────────────────────
 // Calls worker GET /episodes?id=<anilistId>
-// Response: { episodes: [{id, number, title, image}], totalEpisodes }
-// The `id` field is the gogoanime episode ID (e.g. "one-piece-episode-1")
+// Response: { episodes: [{id, number, title, image, provider}], provider }
+let curProvider = 'gogoanime'; // track which provider episodes came from
+
 async function loadEpList(id) {
   try {
     const url = workerUrl('/episodes', { id });
     log('episodes →', url.slice(0, 90));
     const r = await fetch(url);
     if (!r.ok) {
-      const txt = await r.text().catch(() => r.status);
-      throw new Error(`HTTP ${r.status}: ${txt}`.slice(0, 120));
+      const txt = await r.text().catch(() => String(r.status));
+      throw new Error('HTTP ' + r.status + ': ' + txt.slice(0, 100));
     }
     const data = await r.json();
     log('episodes response:', JSON.stringify(data).slice(0, 200));
 
     if (data.episodes?.length) {
       allEps = data.episodes;
-      log('got', allEps.length, 'eps — first id:', allEps[0]?.id);
+      curProvider = data.provider || 'gogoanime';
+      log('got', allEps.length, 'eps, provider:', curProvider, ', first id:', allEps[0]?.id);
     } else {
       throw new Error(data.error || 'No episodes returned');
     }
   } catch(e) {
     log('episodes failed:', e.message, '— falling back to stubs');
     const cnt = curAnime?.episodes || 1;
-    // Stubs have no gogoanime ID — stream won't work but at least UI shows
     allEps = Array.from({ length: cnt }, (_, i) => ({
-      id: null, number: i + 1, title: `Episode ${i + 1}`,
+      id: null, number: i + 1, title: 'Episode ' + (i + 1),
     }));
   }
 
@@ -598,8 +599,8 @@ $('#epf').addEventListener('input', e => {
 });
 
 // ── LOAD EPISODE ──────────────────────────────────────────────────────────────
-// Calls worker GET /stream-url?epId=<gogoanimeEpId>
-// Response: { url, quality, sources, headers }
+// Calls worker GET /stream-url?epId=<id>&provider=<p>&watchId=<id>&subType=sub|dub
+// Response: { url, quality, sources, headers, subtitles }
 async function loadEp(idx) {
   if (!allEps[idx]) return;
   curEpIdx = idx; retryIdx = idx;
@@ -613,40 +614,31 @@ async function loadEp(idx) {
   $('#btn-next').disabled = idx >= allEps.length - 1;
   $('#src-badge').textContent = '';
 
-  // No gogoanime episode ID — can't stream
   if (!ep.id) {
-    setMsg(null, false, true,
-      'No stream ID for this episode — the anime may not be on GogoAnime yet.',
-      null
-    );
+    setMsg(null, false, true, 'No stream ID for this episode.', null);
     return;
   }
 
-  // Build the episode ID to pass to the worker
-  // For dub: gogoanime uses a separate slug like "anime-title-dub-episode-N"
-  // The Consumet /meta/anilist/info with provider=gogoanime returns sub IDs by default.
-  // Dub IDs follow the pattern: replace the anime slug part with "<slug>-dub".
-  let epId = ep.id;
-  if (curAudio === 'dub') {
-    // e.g. "one-piece-episode-1" → "one-piece-dub-episode-1"
-    epId = epId.replace(/(-episode-\d+)$/, '-dub$1');
-    // Guard against double -dub-dub
-    epId = epId.replace(/-dub-dub/, '-dub');
-  }
+  const provider = ep.provider || curProvider || 'gogoanime';
+  const subType  = curAudio === 'dub' ? 'dub' : 'sub';
 
-  setMsg(`Loading ep ${ep.number}…`, true);
-  log('loadEp', ep.number, '| epId:', epId);
+  setMsg('Loading ep ' + ep.number + '…', true);
+  log('loadEp', ep.number, '| epId:', ep.id, '| provider:', provider, '| subType:', subType);
 
   try {
-    // ✅ KEY FIX: send ?epId= not ?id=&ep=&cat=
-    const url = workerUrl('/stream-url', { epId });
-    log('stream-url →', url.slice(0, 100));
+    const url = workerUrl('/stream-url', {
+      epId:     ep.id,
+      provider: provider,
+      watchId:  curAnime?.id || ep.id,
+      subType:  subType,
+    });
+    log('stream-url →', url.slice(0, 120));
     const r = await fetch(url);
     const data = await r.json();
     log('stream-url resp:', JSON.stringify(data).slice(0, 200));
 
     if (data.url) {
-      $('#src-badge').textContent = data.quality || 'gogoanime';
+      $('#src-badge').textContent = data.quality || provider;
       playHLS(data.url, data.headers);
     } else {
       throw new Error(data.error || 'No URL in response');
