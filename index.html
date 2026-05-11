@@ -257,152 +257,276 @@ const dbgEl = document.getElementById('dbg');
 function log(...a) {
   const msg = a.map(x => typeof x === 'object' ? JSON.stringify(x) : String(x)).join(' ');
   console.log('[A]', msg);
-  const d = document.createElement('div'); d.textContent = new Date().toISOString().slice(11,19)+' '+msg;
-  dbgEl.appendChild(d); dbgEl.scrollTop = dbgEl.scrollHeight;
+  const d = document.createElement('div');
+  d.textContent = new Date().toISOString().slice(11,19) + ' ' + msg;
+  dbgEl.appendChild(d);
+  dbgEl.scrollTop = dbgEl.scrollHeight;
 }
 
 // ── PROXY ──────────────────────────────────────────────────────────────────────
 let PROXY = localStorage.getItem('animura_proxy') || '';
+
 function workerUrl(route, params) {
-  if (!PROXY) { showBanner(); throw new Error('No Worker URL'); }
+  if (!PROXY) { showBanner(); throw new Error('No Worker URL configured'); }
   const qs = new URLSearchParams(params).toString();
-  return `${PROXY.replace(/\/$/,'')}${route}${qs?'?'+qs:''}`;
+  return `${PROXY.replace(/\/$/,'')}${route}${qs ? '?' + qs : ''}`;
 }
-function pStream(rawUrl) { return PROXY ? workerUrl('/stream', { url: rawUrl }) : rawUrl; }
+
+// Returns a proxied stream URL (passes raw URL through /stream)
+function pStream(rawUrl) {
+  return PROXY ? workerUrl('/stream', { url: rawUrl }) : rawUrl;
+}
+
 function saveProxy() {
   const v = document.getElementById('proxy-input').value.trim();
   if (!v) { toast('Paste Worker URL first!'); return; }
-  PROXY = v; localStorage.setItem('animura_proxy', v);
-  updatePBtn(); dismissBanner(); toast('✓ Saved!');
+  PROXY = v;
+  localStorage.setItem('animura_proxy', v);
+  updatePBtn();
+  dismissBanner();
+  toast('✓ Saved!');
 }
-function dismissBanner() { document.getElementById('proxy-banner').style.display='none'; if(PROXY)localStorage.setItem('animura_bok','1'); }
-function showBanner()    { document.getElementById('proxy-banner').style.display='flex'; }
-function toggleBanner()  { const b=document.getElementById('proxy-banner'); b.style.display=b.style.display==='none'?'flex':'none'; }
-function updatePBtn()    { const b=document.getElementById('pbtn'); b.textContent=PROXY?'✓ Worker':'⚙ Worker'; b.classList.toggle('ok',!!PROXY); }
-if (PROXY) { document.getElementById('proxy-input').value=PROXY; updatePBtn(); if(localStorage.getItem('animura_bok'))document.getElementById('proxy-banner').style.display='none'; }
+function dismissBanner() {
+  document.getElementById('proxy-banner').style.display = 'none';
+  if (PROXY) localStorage.setItem('animura_bok', '1');
+}
+function showBanner()   { document.getElementById('proxy-banner').style.display = 'flex'; }
+function toggleBanner() { const b = document.getElementById('proxy-banner'); b.style.display = b.style.display === 'none' ? 'flex' : 'none'; }
+function updatePBtn()   { const b = document.getElementById('pbtn'); b.textContent = PROXY ? '✓ Worker' : '⚙ Worker'; b.classList.toggle('ok', !!PROXY); }
+
+if (PROXY) {
+  document.getElementById('proxy-input').value = PROXY;
+  updatePBtn();
+  if (localStorage.getItem('animura_bok')) document.getElementById('proxy-banner').style.display = 'none';
+}
 
 // ── ANILIST ────────────────────────────────────────────────────────────────────
 const AL = 'https://graphql.anilist.co';
-async function gql(q, v={}) {
-  const r = await fetch(AL, {method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({query:q,variables:v})});
-  if (!r.ok) throw new Error('AniList '+r.status);
-  const {data,errors} = await r.json();
+
+async function gql(q, v = {}) {
+  const r = await fetch(AL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ query: q, variables: v }),
+  });
+  if (!r.ok) throw new Error('AniList ' + r.status);
+  const { data, errors } = await r.json();
   if (errors?.length) throw new Error(errors[0].message);
   return data;
 }
+
 const F = `id title{romaji english}description(asHtml:false)coverImage{extraLarge large}bannerImage format status seasonYear episodes averageScore genres`;
+
 async function aPage(vars) {
-  const s = vars.sort||'TRENDING_DESC';
-  const q = `query($page:Int,$perPage:Int${vars.search!==undefined?',$search:String':''}${vars.genre?',$genre:String':''}${vars.season?',$season:MediaSeason,$year:Int':''}${vars.status?',$status:MediaStatus':''}){Page(page:$page,perPage:$perPage){pageInfo{hasNextPage}media(type:ANIME,sort:[${s}]${vars.search!==undefined?',search:$search':''}${vars.genre?',genre:$genre':''}${vars.season?',season:$season,seasonYear:$year':''}${vars.status?',status:$status':''}){${F}}}}`;
+  const s = vars.sort || 'TRENDING_DESC';
+  const q = `query($page:Int,$perPage:Int${vars.search !== undefined ? ',$search:String' : ''}${vars.genre ? ',$genre:String' : ''}${vars.season ? ',$season:MediaSeason,$year:Int' : ''}${vars.status ? ',$status:MediaStatus' : ''}){Page(page:$page,perPage:$perPage){pageInfo{hasNextPage}media(type:ANIME,sort:[${s}]${vars.search !== undefined ? ',search:$search' : ''}${vars.genre ? ',genre:$genre' : ''}${vars.season ? ',season:$season,seasonYear:$year' : ''}${vars.status ? ',status:$status' : ''}){${F}}}}`;
   const d = await gql(q, vars);
-  return {results:d.Page.media||[],hasNextPage:d.Page.pageInfo.hasNextPage};
+  return { results: d.Page.media || [], hasNextPage: d.Page.pageInfo.hasNextPage };
 }
 
 // ── UTILS ──────────────────────────────────────────────────────────────────────
-const $ = s=>document.querySelector(s), $$ = s=>document.querySelectorAll(s);
-const strip = h=>h?h.replace(/<[^>]*>/g,''):'';
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const strip = h => h ? h.replace(/<[^>]*>/g, '') : '';
 const FB = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='3' height='4'%3E%3Crect fill='%23141422' width='3' height='4'/%3E%3C/svg%3E";
-function toast(msg,ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
+
+function toast(msg, ms = 2600) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), ms);
+}
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
-let spotlight=[], spIdx=0, spTimer;
-let curAnime=null, curAudio='sub', curEpIdx=0;
-let allEps=[], filteredEps=[];
-let curTab='TRENDING_DESC', curGenre='', curPage=1;
-let retryIdx=null;
+let spotlight = [], spIdx = 0, spTimer;
+let curAnime = null, curAudio = 'sub', curEpIdx = 0;
+let allEps = [], filteredEps = [];
+let curTab = 'TRENDING_DESC', curGenre = '', curPage = 1;
+let retryIdx = null;
 
 // ── SPOTLIGHT ─────────────────────────────────────────────────────────────────
 async function loadSpotlight() {
-  try { const d=await aPage({page:1,perPage:12,sort:'TRENDING_DESC'}); spotlight=d.results.filter(a=>a.bannerImage); if(!spotlight.length)return; renderSpot(0); buildDots(); startTimer(); } catch(e){ console.warn(e); }
+  try {
+    const d = await aPage({ page: 1, perPage: 12, sort: 'TRENDING_DESC' });
+    spotlight = d.results.filter(a => a.bannerImage);
+    if (!spotlight.length) return;
+    renderSpot(0); buildDots(); startTimer();
+  } catch(e) { console.warn(e); }
 }
+
 function renderSpot(i) {
-  const a=spotlight[i]; if(!a)return;
-  $('#hbg').style.backgroundImage=`url(${a.bannerImage})`;
-  $('#htitle').textContent=a.title?.english||a.title?.romaji||'';
-  $('#hdesc').textContent=strip(a.description||'');
-  const tc=$('#hchips'); tc.innerHTML='';
-  (a.genres||[]).slice(0,3).forEach(g=>{ const s=document.createElement('span'); s.className='chip'; s.textContent=g; tc.appendChild(s); });
-  $('#hwat').onclick=$('#hinf').onclick=()=>openAnime(a.id);
-  $$('.dot').forEach((d,j)=>d.classList.toggle('active',j===i));
+  const a = spotlight[i]; if (!a) return;
+  $('#hbg').style.backgroundImage = `url(${a.bannerImage})`;
+  $('#htitle').textContent = a.title?.english || a.title?.romaji || '';
+  $('#hdesc').textContent = strip(a.description || '');
+  const tc = $('#hchips'); tc.innerHTML = '';
+  (a.genres || []).slice(0, 3).forEach(g => {
+    const s = document.createElement('span'); s.className = 'chip'; s.textContent = g; tc.appendChild(s);
+  });
+  $('#hwat').onclick = $('#hinf').onclick = () => openAnime(a.id);
+  $$('.dot').forEach((d, j) => d.classList.toggle('active', j === i));
 }
+
 function buildDots() {
-  const c=$('#hdots'); c.innerHTML='';
-  spotlight.slice(0,8).forEach((_,i)=>{ const d=document.createElement('button'); d.className='dot'+(i===0?' active':''); d.onclick=()=>{ clearTimeout(spTimer); spIdx=i; renderSpot(i); startTimer(); }; c.appendChild(d); });
+  const c = $('#hdots'); c.innerHTML = '';
+  spotlight.slice(0, 8).forEach((_, i) => {
+    const d = document.createElement('button');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => { clearTimeout(spTimer); spIdx = i; renderSpot(i); startTimer(); };
+    c.appendChild(d);
+  });
 }
-function startTimer(){ spTimer=setTimeout(()=>{ spIdx=(spIdx+1)%Math.min(spotlight.length,8); renderSpot(spIdx); startTimer(); },6000); }
+
+function startTimer() {
+  spTimer = setTimeout(() => {
+    spIdx = (spIdx + 1) % Math.min(spotlight.length, 8);
+    renderSpot(spIdx); startTimer();
+  }, 6000);
+}
 
 // ── GRID ──────────────────────────────────────────────────────────────────────
 async function loadGrid(tab, page, genre) {
-  const g=$('#mgrid');
-  if(page===1) g.innerHTML=Array(18).fill('<div class="skel"></div>').join('');
+  const g = $('#mgrid');
+  if (page === 1) g.innerHTML = Array(18).fill('<div class="skel"></div>').join('');
   try {
     let d;
-    if(tab==='upcoming') d=await aPage({page,perPage:24,sort:'POPULARITY_DESC',status:'NOT_YET_RELEASED'});
-    else if(tab==='recent'){ const m=new Date().getMonth()+1; const s=m<=3?'WINTER':m<=6?'SPRING':m<=9?'SUMMER':'FALL'; d=await aPage({page,perPage:24,sort:'TRENDING_DESC',season:s,year:new Date().getFullYear()}); }
-    else { const v={page,perPage:24,sort:tab}; if(genre)v.genre=genre; d=await aPage(v); }
-    if(page===1) g.innerHTML='';
-    d.results.forEach(a=>g.appendChild(mkCard(a)));
-    if(!d.results.length&&page===1) g.innerHTML='<div style="color:var(--muted);padding:20px;grid-column:1/-1">No results.</div>';
-  } catch(e){ if(page===1) g.innerHTML=`<div style="color:var(--red);padding:20px;grid-column:1/-1">Error: ${e.message}</div>`; }
+    if (tab === 'upcoming') {
+      d = await aPage({ page, perPage: 24, sort: 'POPULARITY_DESC', status: 'NOT_YET_RELEASED' });
+    } else if (tab === 'recent') {
+      const m = new Date().getMonth() + 1;
+      const s = m <= 3 ? 'WINTER' : m <= 6 ? 'SPRING' : m <= 9 ? 'SUMMER' : 'FALL';
+      d = await aPage({ page, perPage: 24, sort: 'TRENDING_DESC', season: s, year: new Date().getFullYear() });
+    } else {
+      const v = { page, perPage: 24, sort: tab };
+      if (genre) v.genre = genre;
+      d = await aPage(v);
+    }
+    if (page === 1) g.innerHTML = '';
+    d.results.forEach(a => g.appendChild(mkCard(a)));
+    if (!d.results.length && page === 1) g.innerHTML = '<div style="color:var(--muted);padding:20px;grid-column:1/-1">No results.</div>';
+  } catch(e) {
+    if (page === 1) g.innerHTML = `<div style="color:var(--red);padding:20px;grid-column:1/-1">Error: ${e.message}</div>`;
+  }
 }
+
 function mkCard(a) {
-  const div=document.createElement('div'); div.className='card';
-  div.innerHTML=`<img src="${a.coverImage?.large||FB}" alt="" loading="lazy" onerror="this.src='${FB}'"><div class="cov"><div class="ct">${a.title?.english||a.title?.romaji||''}</div><div class="cm">${a.format||''} ${a.seasonYear||''}</div></div>${a.averageScore?`<div class="sb">★ ${(a.averageScore/10).toFixed(1)}</div>`:''} ${a.episodes?`<div class="eb">${a.episodes}ep</div>`:''}<div class="pov"><div class="pc"><svg width="15" height="15" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`;
-  div.onclick=()=>openAnime(a.id); return div;
+  const div = document.createElement('div'); div.className = 'card';
+  div.innerHTML = `<img src="${a.coverImage?.large || FB}" alt="" loading="lazy" onerror="this.src='${FB}'">`
+    + `<div class="cov"><div class="ct">${a.title?.english || a.title?.romaji || ''}</div><div class="cm">${a.format || ''} ${a.seasonYear || ''}</div></div>`
+    + (a.averageScore ? `<div class="sb">★ ${(a.averageScore / 10).toFixed(1)}</div>` : '')
+    + (a.episodes ? `<div class="eb">${a.episodes}ep</div>` : '')
+    + `<div class="pov"><div class="pc"><svg width="15" height="15" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`;
+  div.onclick = () => openAnime(a.id);
+  return div;
 }
-function loadMore(){ curPage++; loadGrid(curTab,curPage,curGenre); }
-function setTab(btn,tab){ $$('.ntab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); curTab=tab; curGenre=''; curPage=1; $$('.gchip').forEach(c=>c.classList.remove('active')); $('.gchip').classList.add('active'); const L={TRENDING_DESC:'Trending',POPULARITY_DESC:'Popular',upcoming:'Upcoming',recent:'Current Season'}; $('#gtitle').textContent=L[tab]||tab; loadGrid(tab,1,''); }
-function fG(btn,genre){ $$('.gchip').forEach(c=>c.classList.remove('active')); btn.classList.add('active'); curGenre=genre; curPage=1; $('#gtitle').textContent=genre||'All'; loadGrid(curTab,1,genre); }
+
+function loadMore() { curPage++; loadGrid(curTab, curPage, curGenre); }
+
+function setTab(btn, tab) {
+  $$('.ntab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  curTab = tab; curGenre = ''; curPage = 1;
+  $$('.gchip').forEach(c => c.classList.remove('active'));
+  $('.gchip').classList.add('active');
+  const L = { TRENDING_DESC: 'Trending', POPULARITY_DESC: 'Popular', upcoming: 'Upcoming', recent: 'Current Season' };
+  $('#gtitle').textContent = L[tab] || tab;
+  loadGrid(tab, 1, '');
+}
+
+function fG(btn, genre) {
+  $$('.gchip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  curGenre = genre; curPage = 1;
+  $('#gtitle').textContent = genre || 'All';
+  loadGrid(curTab, 1, genre);
+}
 
 // ── SEARCH ────────────────────────────────────────────────────────────────────
 let stm;
-$('#search-input').addEventListener('input',e=>{ clearTimeout(stm); const q=e.target.value.trim(); if(!q){$('#sdd').classList.remove('open');return} stm=setTimeout(()=>doSearch(q),320); });
-$('#search-input').addEventListener('keydown',e=>{ if(e.key==='Escape'){$('#sdd').classList.remove('open');e.target.value='';} });
-document.addEventListener('click',e=>{ if(!e.target.closest('.swrap'))$('#sdd').classList.remove('open'); });
+$('#search-input').addEventListener('input', e => {
+  clearTimeout(stm);
+  const q = e.target.value.trim();
+  if (!q) { $('#sdd').classList.remove('open'); return; }
+  stm = setTimeout(() => doSearch(q), 320);
+});
+$('#search-input').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { $('#sdd').classList.remove('open'); e.target.value = ''; }
+});
+document.addEventListener('click', e => { if (!e.target.closest('.swrap')) $('#sdd').classList.remove('open'); });
+
 async function doSearch(q) {
-  const dd=$('#sdd'); dd.innerHTML='<div style="padding:10px 12px;color:var(--muted);font-size:.76rem;">Searching…</div>'; dd.classList.add('open');
+  const dd = $('#sdd');
+  dd.innerHTML = '<div style="padding:10px 12px;color:var(--muted);font-size:.76rem;">Searching…</div>';
+  dd.classList.add('open');
   try {
-    const d=await gql(`query($s:String){Page(page:1,perPage:8){media(type:ANIME,search:$s,sort:[SEARCH_MATCH]){id title{romaji english}coverImage{large}format seasonYear episodes}}}`,{s:q});
-    const items=d.Page.media||[];
-    if(!items.length){dd.innerHTML='<div style="padding:10px 12px;color:var(--muted);font-size:.76rem;">No results.</div>';return;}
-    dd.innerHTML=items.map(a=>`<div class="si" onclick="openAnime(${a.id});document.getElementById('sdd').classList.remove('open');document.getElementById('search-input').value=''"><img src="${a.coverImage?.large||FB}" onerror="this.src='${FB}'"><div><div class="si-t">${a.title?.english||a.title?.romaji||''}</div><div class="si-m">${a.format||''} · ${a.seasonYear||''} · ${a.episodes||'?'} eps</div></div></div>`).join('');
-  } catch(e){ dd.innerHTML=`<div style="padding:10px 12px;color:var(--red);font-size:.76rem;">${e.message}</div>`; }
+    const d = await gql(
+      `query($s:String){Page(page:1,perPage:8){media(type:ANIME,search:$s,sort:[SEARCH_MATCH]){id title{romaji english}coverImage{large}format seasonYear episodes}}}`,
+      { s: q }
+    );
+    const items = d.Page.media || [];
+    if (!items.length) { dd.innerHTML = '<div style="padding:10px 12px;color:var(--muted);font-size:.76rem;">No results.</div>'; return; }
+    dd.innerHTML = items.map(a =>
+      `<div class="si" onclick="openAnime(${a.id});document.getElementById('sdd').classList.remove('open');document.getElementById('search-input').value=''">` +
+      `<img src="${a.coverImage?.large || FB}" onerror="this.src='${FB}'">` +
+      `<div><div class="si-t">${a.title?.english || a.title?.romaji || ''}</div>` +
+      `<div class="si-m">${a.format || ''} · ${a.seasonYear || ''} · ${a.episodes || '?'} eps</div></div></div>`
+    ).join('');
+  } catch(e) {
+    dd.innerHTML = `<div style="padding:10px 12px;color:var(--red);font-size:.76rem;">${e.message}</div>`;
+  }
 }
 
 // ── OPEN ANIME ────────────────────────────────────────────────────────────────
-async function openAnime(id, startIdx=0) {
+async function openAnime(id, startIdx = 0) {
   showPage('watch');
-  curAnime=null; allEps=[]; filteredEps=[]; curEpIdx=startIdx; curAudio='sub';
+  curAnime = null; allEps = []; filteredEps = []; curEpIdx = startIdx; curAudio = 'sub';
   $('#btn-sub').classList.add('active'); $('#btn-dub').classList.remove('active');
-  $('#eplist').innerHTML='<div style="padding:18px;text-align:center;color:var(--muted);font-size:.76rem;">Loading…</div>';
-  $('#ainfo').innerHTML=''; $('#relsec').style.display='none'; $('#src-badge').textContent='';
-  setMsg('Fetching info…',true);
-  const q=`query($id:Int){Media(id:$id,type:ANIME){${F}relations{edges{relationType node{id title{romaji english}coverImage{large}format}}}recommendations(sort:RATING_DESC,perPage:10){nodes{rating mediaRecommendation{id title{romaji english}coverImage{large}format}}}}}`;
-  try { const d=await gql(q,{id}); curAnime=d.Media; renderInfo(); renderRel(); await loadEpList(id); }
-  catch(e){ setMsg(null,false,true,e.message); }
+  $('#eplist').innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:.76rem;">Loading…</div>';
+  $('#ainfo').innerHTML = ''; $('#relsec').style.display = 'none'; $('#src-badge').textContent = '';
+  setMsg('Fetching info…', true);
+
+  const q = `query($id:Int){Media(id:$id,type:ANIME){${F}relations{edges{relationType node{id title{romaji english}coverImage{large}format}}}recommendations(sort:RATING_DESC,perPage:10){nodes{rating mediaRecommendation{id title{romaji english}coverImage{large}format}}}}}`;
+  try {
+    const d = await gql(q, { id });
+    curAnime = d.Media;
+    renderInfo();
+    renderRel();
+    await loadEpList(id);
+  } catch(e) {
+    setMsg(null, false, true, e.message);
+  }
 }
 
 // ── EPISODE LIST ──────────────────────────────────────────────────────────────
-// Uses Consumet: GET /meta/anilist/info/{id}?provider=gogoanime
-// Each episode has .id (gogoanime episode ID), .number, .title
+// Calls worker GET /episodes?id=<anilistId>
+// Response: { episodes: [{id, number, title, image}], totalEpisodes }
+// The `id` field is the gogoanime episode ID (e.g. "one-piece-episode-1")
 async function loadEpList(id) {
   try {
     const url = workerUrl('/episodes', { id });
-    log('episodes →', url.slice(0,80));
+    log('episodes →', url.slice(0, 90));
     const r = await fetch(url);
+    if (!r.ok) {
+      const txt = await r.text().catch(() => r.status);
+      throw new Error(`HTTP ${r.status}: ${txt}`.slice(0, 120));
+    }
     const data = await r.json();
-    log('episodes response:', JSON.stringify(data).slice(0,200));
+    log('episodes response:', JSON.stringify(data).slice(0, 200));
 
     if (data.episodes?.length) {
       allEps = data.episodes;
-      log('got', allEps.length, 'eps, first ID:', allEps[0]?.id);
+      log('got', allEps.length, 'eps — first id:', allEps[0]?.id);
     } else {
       throw new Error(data.error || 'No episodes returned');
     }
   } catch(e) {
-    log('episodes failed:', e.message, '— using stubs');
+    log('episodes failed:', e.message, '— falling back to stubs');
     const cnt = curAnime?.episodes || 1;
-    allEps = Array.from({length:cnt}, (_,i) => ({ id:null, number:i+1, title:`Episode ${i+1}` }));
+    // Stubs have no gogoanime ID — stream won't work but at least UI shows
+    allEps = Array.from({ length: cnt }, (_, i) => ({
+      id: null, number: i + 1, title: `Episode ${i + 1}`,
+    }));
   }
 
   filteredEps = allEps;
@@ -411,127 +535,219 @@ async function loadEpList(id) {
   loadEp(curEpIdx);
 }
 
-function renderEpItems(){
-  const list=$('#eplist'); list.innerHTML='';
-  if(!filteredEps.length){ list.innerHTML='<div style="padding:12px;color:var(--muted);font-size:.76rem;">No episodes.</div>'; return; }
-  filteredEps.forEach(ep=>{ const ri=allEps.findIndex(e=>e.number===ep.number); const div=document.createElement('div'); div.className='epi'+(ri===curEpIdx?' active':''); div.dataset.i=ri; div.innerHTML=`<div class="epn">${ep.number}</div><div class="ept">${ep.title}</div>`; div.onclick=()=>loadEp(ri); list.appendChild(div); });
-  const ae=$('.epi.active'); if(ae)ae.scrollIntoView({block:'nearest',behavior:'smooth'});
+function renderEpItems() {
+  const list = $('#eplist'); list.innerHTML = '';
+  if (!filteredEps.length) {
+    list.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:.76rem;">No episodes.</div>'; return;
+  }
+  filteredEps.forEach(ep => {
+    const ri = allEps.findIndex(e => e.number === ep.number);
+    const div = document.createElement('div');
+    div.className = 'epi' + (ri === curEpIdx ? ' active' : '');
+    div.dataset.i = ri;
+    div.innerHTML = `<div class="epn">${ep.number}</div><div class="ept">${ep.title}</div>`;
+    div.onclick = () => loadEp(ri);
+    list.appendChild(div);
+  });
+  const ae = $('.epi.active');
+  if (ae) ae.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
-$('#epf').addEventListener('input',e=>{ const q=e.target.value.toLowerCase().trim(); filteredEps=q?allEps.filter(ep=>ep.title.toLowerCase().includes(q)||String(ep.number).includes(q)):allEps; renderEpItems(); });
+
+$('#epf').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase().trim();
+  filteredEps = q
+    ? allEps.filter(ep => ep.title.toLowerCase().includes(q) || String(ep.number).includes(q))
+    : allEps;
+  renderEpItems();
+});
 
 // ── LOAD EPISODE ──────────────────────────────────────────────────────────────
+// Calls worker GET /stream-url?epId=<gogoanimeEpId>
+// Response: { url, quality, sources, headers }
 async function loadEp(idx) {
   if (!allEps[idx]) return;
-  curEpIdx=idx; retryIdx=idx;
+  curEpIdx = idx; retryIdx = idx;
   const ep = allEps[idx];
-  $$('.epi').forEach(el=>el.classList.toggle('active',parseInt(el.dataset.i)===idx));
-  const ae=$('.epi.active'); if(ae) ae.scrollIntoView({block:'nearest',behavior:'smooth'});
-  $('#btn-prev').disabled=idx===0; $('#btn-next').disabled=idx>=allEps.length-1;
-  $('#src-badge').textContent='';
-  setMsg(`Loading ep ${ep.number}…`,true);
 
-  // If no gogoanime ID, dub switch might have changed provider — reload episode list
-  let epId = ep.id;
-  if (!epId) {
-    setMsg(null,false,true,'No stream ID for this episode — the anime may not be on GogoAnime.');
+  $$('.epi').forEach(el => el.classList.toggle('active', parseInt(el.dataset.i) === idx));
+  const ae = $('.epi.active');
+  if (ae) ae.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+  $('#btn-prev').disabled = idx === 0;
+  $('#btn-next').disabled = idx >= allEps.length - 1;
+  $('#src-badge').textContent = '';
+
+  // No gogoanime episode ID — can't stream
+  if (!ep.id) {
+    setMsg(null, false, true,
+      'No stream ID for this episode — the anime may not be on GogoAnime yet.',
+      null
+    );
     return;
   }
 
-  // For dub, Consumet appends "-dub" to the episode ID
+  // Build the episode ID to pass to the worker
+  // For dub: gogoanime uses a separate slug like "anime-title-dub-episode-N"
+  // The Consumet /meta/anilist/info with provider=gogoanime returns sub IDs by default.
+  // Dub IDs follow the pattern: replace the anime slug part with "<slug>-dub".
+  let epId = ep.id;
   if (curAudio === 'dub') {
-    // Replace "episode-N" → try dub variant
+    // e.g. "one-piece-episode-1" → "one-piece-dub-episode-1"
     epId = epId.replace(/(-episode-\d+)$/, '-dub$1');
-    // If already has -dub don't double it
-    if (epId.includes('-dub-dub')) epId = epId.replace('-dub-dub', '-dub');
+    // Guard against double -dub-dub
+    epId = epId.replace(/-dub-dub/, '-dub');
   }
 
-  log('loadEp', ep.number, 'epId:', epId);
+  setMsg(`Loading ep ${ep.number}…`, true);
+  log('loadEp', ep.number, '| epId:', epId);
 
   try {
+    // ✅ KEY FIX: send ?epId= not ?id=&ep=&cat=
     const url = workerUrl('/stream-url', { epId });
-    log('stream-url →', url.slice(0,90));
+    log('stream-url →', url.slice(0, 100));
     const r = await fetch(url);
     const data = await r.json();
-    log('stream-url resp:', JSON.stringify(data).slice(0,200));
+    log('stream-url resp:', JSON.stringify(data).slice(0, 200));
 
     if (data.url) {
-      const qual = data.quality || '';
-      $('#src-badge').textContent = qual ? `${qual}` : 'gogoanime';
+      $('#src-badge').textContent = data.quality || 'gogoanime';
       playHLS(data.url, data.headers);
     } else {
       throw new Error(data.error || 'No URL in response');
     }
   } catch(e) {
     log('stream error:', e.message);
-    setMsg(null,false,true,e.message, ()=>retryIdx!==null&&loadEp(retryIdx));
+    setMsg(null, false, true, e.message, () => retryIdx !== null && loadEp(retryIdx));
   }
 }
 
 // ── HLS PLAYER ────────────────────────────────────────────────────────────────
 function playHLS(rawUrl, extraHeaders) {
   const url = pStream(rawUrl);
-  const v=$('#player'); hideMsg();
-  if(window._hls){window._hls.destroy();window._hls=null;}
-  if(Hls.isSupported()){
-    const hls=new Hls({maxBufferLength:30,enableWorker:false,xhrSetup:(xhr,u)=>{
-      // Some Gogo CDNs need Referer
-      if(extraHeaders?.Referer) xhr.setRequestHeader('Referer',extraHeaders.Referer);
-    }});
-    window._hls=hls; hls.loadSource(url); hls.attachMedia(v);
-    hls.on(Hls.Events.MANIFEST_PARSED,()=>{ log('manifest ok'); v.play().catch(()=>{}); });
-    hls.on(Hls.Events.ERROR,(_,d)=>{ log('hls err',d.type,d.details,d.fatal); if(d.fatal)setMsg(null,false,true,'Playback error — retry or switch SUB↔DUB.',()=>retryIdx!==null&&loadEp(retryIdx)); });
-  } else if(v.canPlayType('application/vnd.apple.mpegurl')){
-    v.src=url; v.load(); v.play().catch(()=>{});
+  const v = $('#player');
+  hideMsg();
+  if (window._hls) { window._hls.destroy(); window._hls = null; }
+
+  if (Hls.isSupported()) {
+    const hls = new Hls({
+      maxBufferLength: 30,
+      enableWorker: false,
+      xhrSetup: (xhr, u) => {
+        if (extraHeaders?.Referer) xhr.setRequestHeader('Referer', extraHeaders.Referer);
+      },
+    });
+    window._hls = hls;
+    hls.loadSource(url);
+    hls.attachMedia(v);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => { log('manifest ok'); v.play().catch(() => {}); });
+    hls.on(Hls.Events.ERROR, (_, d) => {
+      log('hls err', d.type, d.details, d.fatal);
+      if (d.fatal) setMsg(null, false, true, 'Playback error — retry or switch SUB ↔ DUB.', () => retryIdx !== null && loadEp(retryIdx));
+    });
+  } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+    v.src = url; v.load(); v.play().catch(() => {});
   } else {
-    setMsg(null,false,true,'HLS not supported. Use Chrome or Firefox.');
+    setMsg(null, false, true, 'HLS not supported in this browser. Try Chrome or Firefox.');
   }
 }
 
-function swAudio(t){ curAudio=t; $('#btn-sub').classList.toggle('active',t==='sub'); $('#btn-dub').classList.toggle('active',t==='dub'); loadEp(curEpIdx); }
-function prevEp(){ if(curEpIdx>0)loadEp(curEpIdx-1); }
-function nextEp(){ if(curEpIdx<allEps.length-1)loadEp(curEpIdx+1); }
+function swAudio(t) {
+  curAudio = t;
+  $('#btn-sub').classList.toggle('active', t === 'sub');
+  $('#btn-dub').classList.toggle('active', t === 'dub');
+  loadEp(curEpIdx);
+}
+function prevEp() { if (curEpIdx > 0) loadEp(curEpIdx - 1); }
+function nextEp() { if (curEpIdx < allEps.length - 1) loadEp(curEpIdx + 1); }
 
 // ── SKIP ──────────────────────────────────────────────────────────────────────
-let skipTarget=null;
-$('#player').addEventListener('timeupdate',()=>{
-  // (skip times could be fetched from aniskip.com if desired)
+let skipTarget = null;
+$('#player').addEventListener('timeupdate', () => {
+  // Populate skipTarget from aniskip.com data if desired
 });
-function doSkip(){ if(skipTarget!=null){$('#player').currentTime=skipTarget;$('#skip-btn').classList.remove('on');} }
+function doSkip() {
+  if (skipTarget != null) { $('#player').currentTime = skipTarget; $('#skip-btn').classList.remove('on'); }
+}
 
 // ── MESSAGES ──────────────────────────────────────────────────────────────────
-function setMsg(txt,spin=false,isErr=false,errTxt='',retryFn=null){
-  const m=$('#pmsg'); m.style.display='flex';
-  if(isErr){ m.innerHTML=`<div class="perr">⚠ ${errTxt||'Stream unavailable'}<small>Open the debug panel (bottom-right ▸ dbg) for details.</small></div>${retryFn?'<button class="rbtn" id="rbtn">↺ Retry</button>':''}`;if(retryFn&&$('#rbtn'))$('#rbtn').onclick=retryFn; }
-  else{ m.innerHTML=(spin?'<div class="spin"></div>':'')+`<div class="ptxt">${txt||''}</div>`; }
+function setMsg(txt, spin = false, isErr = false, errTxt = '', retryFn = null) {
+  const m = $('#pmsg'); m.style.display = 'flex';
+  if (isErr) {
+    m.innerHTML = `<div class="perr">⚠ ${errTxt || 'Stream unavailable'}<small>Open the debug panel (bottom-right ▸ dbg) for details.</small></div>`
+      + (retryFn ? '<button class="rbtn" id="rbtn">↺ Retry</button>' : '');
+    if (retryFn && $('#rbtn')) $('#rbtn').onclick = retryFn;
+  } else {
+    m.innerHTML = (spin ? '<div class="spin"></div>' : '') + `<div class="ptxt">${txt || ''}</div>`;
+  }
 }
-function hideMsg(){ const m=$('#pmsg'); if(m)m.style.display='none'; }
+function hideMsg() { const m = $('#pmsg'); if (m) m.style.display = 'none'; }
 
 // ── ANIME INFO ────────────────────────────────────────────────────────────────
-function renderInfo(){
-  const a=curAnime; if(!a)return;
-  const t=a.title?.english||a.title?.romaji||'', img=a.coverImage?.large||FB, desc=strip(a.description||''), sc=a.averageScore;
-  const c=sc>=80?'var(--green)':sc>=60?'var(--gold)':'var(--red)';
-  $('#ainfo').innerHTML=`<div class="aihead"><div class="aiposter"><img src="${img}" alt="${t}"></div><div><div class="aititle">${t}</div><div class="aichips">${(a.genres||[]).slice(0,5).map(g=>`<span class="chip">${g}</span>`).join('')}</div><div class="aistats">${sc?`<div><div class="aisv" style="color:${c}">★ ${(sc/10).toFixed(1)}</div><div class="aisl">Score</div></div>`:''}<div><div class="aisv">${a.episodes||'?'}</div><div class="aisl">Episodes</div></div><div><div class="aisv">${a.seasonYear||'—'}</div><div class="aisl">Year</div></div><div><div class="aisv" style="font-size:.68rem">${a.status||'—'}</div><div class="aisl">Status</div></div></div></div></div><div class="aidesc col" id="aidesc">${desc}</div><button class="xbtn" onclick="toggleDesc()">Show more ↓</button>`;
+function renderInfo() {
+  const a = curAnime; if (!a) return;
+  const t = a.title?.english || a.title?.romaji || '';
+  const img = a.coverImage?.large || FB;
+  const desc = strip(a.description || '');
+  const sc = a.averageScore;
+  const c = sc >= 80 ? 'var(--green)' : sc >= 60 ? 'var(--gold)' : 'var(--red)';
+  $('#ainfo').innerHTML =
+    `<div class="aihead">` +
+    `<div class="aiposter"><img src="${img}" alt="${t}"></div>` +
+    `<div><div class="aititle">${t}</div>` +
+    `<div class="aichips">${(a.genres || []).slice(0,5).map(g => `<span class="chip">${g}</span>`).join('')}</div>` +
+    `<div class="aistats">` +
+    (sc ? `<div><div class="aisv" style="color:${c}">★ ${(sc/10).toFixed(1)}</div><div class="aisl">Score</div></div>` : '') +
+    `<div><div class="aisv">${a.episodes || '?'}</div><div class="aisl">Episodes</div></div>` +
+    `<div><div class="aisv">${a.seasonYear || '—'}</div><div class="aisl">Year</div></div>` +
+    `<div><div class="aisv" style="font-size:.68rem">${a.status || '—'}</div><div class="aisl">Status</div></div>` +
+    `</div></div></div>` +
+    `<div class="aidesc col" id="aidesc">${desc}</div>` +
+    `<button class="xbtn" onclick="toggleDesc()">Show more ↓</button>`;
 }
-function toggleDesc(){ const d=$('#aidesc'),b=d.nextElementSibling; const c=d.classList.toggle('col'); b.textContent=c?'Show more ↓':'Show less ↑'; }
+
+function toggleDesc() {
+  const d = $('#aidesc'), b = d.nextElementSibling;
+  const c = d.classList.toggle('col');
+  b.textContent = c ? 'Show more ↓' : 'Show less ↑';
+}
 
 // ── RELATED ───────────────────────────────────────────────────────────────────
-function renderRel(){
-  const a=curAnime; if(!a)return;
-  const rels=(a.relations?.edges||[]).map(e=>({id:e.node.id,title:e.node.title,img:e.node.coverImage?.large,type:e.relationType}));
-  const recs=(a.recommendations?.nodes||[]).map(n=>n.mediaRecommendation).filter(Boolean).map(m=>({id:m.id,title:m.title,img:m.coverImage?.large,type:'REC'}));
-  const items=[...rels.slice(0,6),...recs.slice(0,5)].filter(r=>r.id);
-  const s=$('#relsec'); if(!items.length){s.style.display='none';return;}
-  s.style.display='block';
-  s.innerHTML=`<div class="sectitle">Related & Recommended</div><div class="relscroll">${items.map(r=>`<div class="relcard" onclick="openAnime(${r.id})"><img src="${r.img||FB}" loading="lazy" onerror="this.src='${FB}'"><div class="relct">${r.title?.english||r.title?.romaji||''}</div><div class="relcf">${r.type||''}</div></div>`).join('')}</div>`;
+function renderRel() {
+  const a = curAnime; if (!a) return;
+  const rels = (a.relations?.edges || []).map(e => ({
+    id: e.node.id, title: e.node.title, img: e.node.coverImage?.large, type: e.relationType,
+  }));
+  const recs = (a.recommendations?.nodes || [])
+    .map(n => n.mediaRecommendation).filter(Boolean)
+    .map(m => ({ id: m.id, title: m.title, img: m.coverImage?.large, type: 'REC' }));
+  const items = [...rels.slice(0,6), ...recs.slice(0,5)].filter(r => r.id);
+  const s = $('#relsec');
+  if (!items.length) { s.style.display = 'none'; return; }
+  s.style.display = 'block';
+  s.innerHTML = `<div class="sectitle">Related & Recommended</div><div class="relscroll">`
+    + items.map(r =>
+      `<div class="relcard" onclick="openAnime(${r.id})">` +
+      `<img src="${r.img || FB}" loading="lazy" onerror="this.src='${FB}'">` +
+      `<div class="relct">${r.title?.english || r.title?.romaji || ''}</div>` +
+      `<div class="relcf">${r.type || ''}</div></div>`
+    ).join('') + `</div>`;
 }
 
 // ── PAGE NAV ──────────────────────────────────────────────────────────────────
-function showPage(id){ $$('.page').forEach(p=>p.classList.remove('active')); $('#'+id).classList.add('active'); window.scrollTo(0,0); }
-function showHome(){ if(window._hls){window._hls.destroy();window._hls=null;} $('#player').pause(); showPage('home'); }
+function showPage(id) {
+  $$('.page').forEach(p => p.classList.remove('active'));
+  $('#' + id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function showHome() {
+  if (window._hls) { window._hls.destroy(); window._hls = null; }
+  $('#player').pause();
+  showPage('home');
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-loadSpotlight(); loadGrid('TRENDING_DESC',1,'');
+loadSpotlight();
+loadGrid('TRENDING_DESC', 1, '');
 </script>
 </body>
 </html>
