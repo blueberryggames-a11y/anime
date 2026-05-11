@@ -522,7 +522,7 @@ async function openAnime(id, startIdx = 0) {
   $('#ainfo').innerHTML = ''; $('#relsec').style.display = 'none'; $('#src-badge').textContent = '';
   setMsg('Fetching info…', true);
 
-  const q = `query($id:Int){Media(id:$id,type:ANIME){${F}relations{edges{relationType node{id title{romaji english}coverImage{large}format}}}recommendations(sort:RATING_DESC,perPage:10){nodes{rating mediaRecommendation{id title{romaji english}coverImage{large}format}}}}}`;
+  const q = `query($id:Int){Media(id:$id,type:ANIME){${F} relations{edges{relationType node{id title{romaji english}coverImage{large}format}}} recommendations(sort:RATING_DESC,perPage:10){nodes{rating mediaRecommendation{id title{romaji english}coverImage{large}format}}}}}`;
   try {
     const d = await gql(q, { id });
     curAnime = d.Media;
