@@ -362,7 +362,6 @@
   .ctrl-btn:hover, .ctrl-btn.active {
     background: var(--accent); border-color: var(--accent); color: #fff;
   }
-  /* FIX: dim unavailable audio type */
   .ctrl-btn.unavailable {
     opacity: 0.35; cursor: not-allowed;
   }
@@ -514,7 +513,7 @@
 <!-- ── SETUP BANNER ── -->
 <div id="setup-banner">
   <span>⚡ <strong>Proxy URL</strong> — paste your Cloudflare Worker URL:</span>
-  <input type="text" id="proxy-input" placeholder="https://frosty-hill-1842.coltenboop.workers.dev/">
+  <input type="text" id="proxy-input" placeholder="https://your-worker.workers.dev">
   <button id="proxy-save" onclick="saveProxy()">Save & Load</button>
   <button id="banner-dismiss" onclick="dismissBanner()" title="Dismiss">✕</button>
 </div>
@@ -540,7 +539,6 @@
 
 <!-- ══ HOME PAGE ══ -->
 <div class="page active" id="home-page">
-  <!-- Spotlight -->
   <div class="spotlight">
     <div class="sp-bg" id="sp-bg"></div>
     <div class="sp-content">
@@ -566,7 +564,6 @@
     <div class="sp-dots" id="sp-dots"></div>
   </div>
 
-  <!-- Genre chips -->
   <div class="genre-strip">
     <button class="genre-chip active" onclick="filterGenre(this,'')">All</button>
     <button class="genre-chip" onclick="filterGenre(this,'Action')">Action</button>
@@ -583,7 +580,6 @@
     <button class="genre-chip" onclick="filterGenre(this,'Sports')">Sports</button>
   </div>
 
-  <!-- Main grid -->
   <div class="section">
     <div class="section-header">
       <div class="section-title" id="grid-title">Trending</div>
@@ -596,9 +592,7 @@
 <!-- ══ WATCH PAGE ══ -->
 <div class="page" id="watch-page">
   <div class="watch-layout">
-    <!-- Left: player + info -->
     <div class="player-col">
-      <!-- Player -->
       <div class="player-wrapper">
         <video id="player" controls playsinline></video>
         <div class="player-loader" id="player-loader">
@@ -612,7 +606,6 @@
         <button id="skip-btn" onclick="skipSegment()"></button>
       </div>
 
-      <!-- Controls bar -->
       <div class="ctrl-bar">
         <div class="ctrl-grp">
           <span class="ctrl-label">Audio:</span>
@@ -636,14 +629,10 @@
         </div>
       </div>
 
-      <!-- Anime info -->
       <div class="anime-info" id="anime-info"></div>
-
-      <!-- Related -->
       <div class="related-section" id="related-section"></div>
     </div>
 
-    <!-- Right: episode sidebar -->
     <div class="ep-sidebar">
       <div class="ep-sidebar-head">
         <span class="ep-sidebar-head-title">Episodes</span>
@@ -664,11 +653,11 @@
 let PROXY = localStorage.getItem('animura_proxy') || '';
 
 function api(path) {
-  if (!PROXY) {
-    showBanner();
-    throw new Error('No proxy configured. Set your Cloudflare Worker URL above.');
-  }
-  return PROXY.replace(/\/$/, '') + path;
+  if (!PROXY) { showBanner(); throw new Error('No proxy configured.'); }
+  // Ensure path starts with / and proxy has no trailing slash
+  const base = PROXY.replace(/\/$/, '');
+  const p = path.startsWith('/') ? path : '/' + path;
+  return base + p;
 }
 
 // ─── PROXY UI ─────────────────────────────────────────────
@@ -707,88 +696,98 @@ if (PROXY) {
 // ─── UTILS ────────────────────────────────────────────────
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
-const stripHtml = h => h ? h.replace(/<[^>]*>/g,'') : '';
+const stripHtml = h => h ? h.replace(/<[^>]*>/g, '') : '';
 
-function toast(msg, ms=2800) {
+function toast(msg, ms = 2800) {
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), ms);
 }
 
 // ─── STATE ────────────────────────────────────────────────
 let spotlight = [], spIdx = 0, spTimer;
-let curAnime = null, curEps = {}, curProv = 'kiwi', curAudio = 'sub', curEpIdx = 0;
+let curAnime = null, curEps = {}, curProv = 'aniwatch', curAudio = 'sub', curEpIdx = 0;
 let allEps = [], filteredEps = [];
 let curTab = 'trending', curGenre = '', curPage = 1;
+// Track current anilist ID so retry works
+let curAnimeId = null;
 
 // ─── SPOTLIGHT ────────────────────────────────────────────
 async function loadSpotlight() {
   try {
-    const r = await fetch(api('/spotlight')); const d = await r.json();
+    const r = await fetch(api('/spotlight'));
+    const d = await r.json();
     spotlight = d.results || d || [];
     if (!spotlight.length) return;
     renderSpot(0); buildDots(); startSpotTimer();
-  } catch(e) { console.warn('Spotlight failed', e.message); }
+  } catch (e) { console.warn('Spotlight failed', e.message); }
 }
 function renderSpot(idx) {
   const a = spotlight[idx]; if (!a) return;
-  const bg = a.bannerImage || a.coverImage?.extraLarge || '';
+  const bg = a.bannerImage || a.coverImage?.extraLarge || a.coverImage?.large || '';
   $('#sp-bg').style.backgroundImage = `url(${bg})`;
-  const title = a.title?.english || a.title?.romaji || a.title || '';
+  const title = a.title?.english || a.title?.romaji || '';
   $('#sp-title').textContent = title;
   $('#sp-desc').textContent = stripHtml(a.description || '');
   const tagsEl = $('#sp-tags'); tagsEl.innerHTML = '';
-  (a.genres||[]).slice(0,3).forEach(g => {
-    const t = document.createElement('span'); t.className='tag'; t.textContent=g; tagsEl.appendChild(t);
+  (a.genres || []).slice(0, 3).forEach(g => {
+    const t = document.createElement('span'); t.className = 'tag'; t.textContent = g; tagsEl.appendChild(t);
   });
   $('#sp-watch').onclick = () => openAnime(a.id);
   $('#sp-info').onclick = () => openAnime(a.id);
-  $$('.dot').forEach((d,i) => d.classList.toggle('active', i===idx));
+  $$('.dot').forEach((d, i) => d.classList.toggle('active', i === idx));
 }
 function buildDots() {
   const c = $('#sp-dots'); c.innerHTML = '';
-  spotlight.slice(0,8).forEach((_,i) => {
-    const d = document.createElement('button'); d.className='dot'+(i===0?' active':'');
-    d.onclick = () => { clearTimeout(spTimer); spIdx=i; renderSpot(i); startSpotTimer(); };
+  spotlight.slice(0, 8).forEach((_, i) => {
+    const d = document.createElement('button');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => { clearTimeout(spTimer); spIdx = i; renderSpot(i); startSpotTimer(); };
     c.appendChild(d);
   });
 }
 function startSpotTimer() {
   spTimer = setTimeout(() => {
-    spIdx = (spIdx+1) % Math.min(spotlight.length, 8);
+    spIdx = (spIdx + 1) % Math.min(spotlight.length, 8);
     renderSpot(spIdx); startSpotTimer();
   }, 6000);
 }
 
 // ─── HOME GRID ────────────────────────────────────────────
-async function loadGrid(tab='trending', page=1, genre='') {
+async function loadGrid(tab = 'trending', page = 1, genre = '') {
   const g = $('#main-grid');
-  if (page===1) { g.innerHTML = Array(16).fill('<div class="skeleton-card"></div>').join(''); }
+  if (page === 1) { g.innerHTML = Array(16).fill('<div class="skeleton-card"></div>').join(''); }
   try {
     const url = genre
       ? api(`/filter?genre=${encodeURIComponent(genre)}&sort=POPULARITY_DESC&page=${page}&per_page=24`)
       : api(`/${tab}?page=${page}&per_page=24`);
-    const r = await fetch(url); const d = await r.json();
-    if (page===1) g.innerHTML='';
-    (d.results||[]).forEach(a => g.appendChild(makeCard(a)));
-  } catch(e) {
-    if (page===1) g.innerHTML=`<div style="color:var(--red);padding:20px;font-size:0.875rem;">Error: ${e.message}</div>`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    if (page === 1) g.innerHTML = '';
+    (d.results || []).forEach(a => g.appendChild(makeCard(a)));
+    if (!(d.results || []).length && page === 1) {
+      g.innerHTML = '<div style="color:var(--muted);padding:20px;font-size:0.875rem;">No results found.</div>';
+    }
+  } catch (e) {
+    if (page === 1) g.innerHTML = `<div style="color:var(--red);padding:20px;font-size:0.875rem;">Error: ${e.message}</div>`;
   }
 }
 function makeCard(a) {
   const id = a.id || a.anilistId;
-  const title = a.title?.english || a.title?.romaji || a.title || '';
-  const img = a.coverImage?.large || a.coverImage?.medium || a.image || '';
+  const title = a.title?.english || a.title?.romaji || '';
+  const img = a.coverImage?.large || a.coverImage?.medium || '';
   const score = a.averageScore || a.score;
-  const eps = a.episodes || a.totalEpisodes || '';
-  const div = document.createElement('div'); div.className='anime-card';
+  const eps = a.episodes || '';
   const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='220'%3E%3Crect fill='%2318181f' width='150' height='220'/%3E%3C/svg%3E";
+  const div = document.createElement('div');
+  div.className = 'anime-card';
   div.innerHTML = `
-    <img src="${img||fallback}" alt="" loading="lazy" onerror="this.src='${fallback}'">
+    <img src="${img || fallback}" alt="" loading="lazy" onerror="this.src='${fallback}'">
     <div class="card-overlay">
       <div class="card-title">${title}</div>
-      <div class="card-meta">${a.format||''} ${a.seasonYear||a.year||''}</div>
+      <div class="card-meta">${a.format || ''} ${a.seasonYear || a.year || ''}</div>
     </div>
-    ${score ? `<div class="score-badge">★ ${(score/10).toFixed(1)}</div>` : ''}
+    ${score ? `<div class="score-badge">★ ${(score / 10).toFixed(1)}</div>` : ''}
     ${eps ? `<div class="ep-badge">${eps} ep</div>` : ''}
     <div class="play-overlay"><div class="play-circle">
       <svg width="18" height="18" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -799,120 +798,131 @@ function makeCard(a) {
 function loadMore() { curPage++; loadGrid(curTab, curPage, curGenre); }
 function setTab(btn, tab) {
   $$('.nav-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-  curTab=tab; curGenre=''; curPage=1;
-  $$('.genre-chip').forEach(c=>c.classList.remove('active'));
+  curTab = tab; curGenre = ''; curPage = 1;
+  $$('.genre-chip').forEach(c => c.classList.remove('active'));
   $('.genre-chip').classList.add('active');
-  $('#grid-title').textContent = tab.charAt(0).toUpperCase()+tab.slice(1);
-  loadGrid(tab,1);
+  $('#grid-title').textContent = tab.charAt(0).toUpperCase() + tab.slice(1);
+  loadGrid(tab, 1);
 }
 function filterGenre(btn, genre) {
-  $$('.genre-chip').forEach(c=>c.classList.remove('active')); btn.classList.add('active');
-  curGenre=genre; curPage=1;
-  $('#grid-title').textContent = genre || (curTab.charAt(0).toUpperCase()+curTab.slice(1));
+  $$('.genre-chip').forEach(c => c.classList.remove('active')); btn.classList.add('active');
+  curGenre = genre; curPage = 1;
+  $('#grid-title').textContent = genre || (curTab.charAt(0).toUpperCase() + curTab.slice(1));
   loadGrid(curTab, 1, genre);
 }
 
 // ─── SEARCH ───────────────────────────────────────────────
 let stimer;
 $('#search-input').addEventListener('input', e => {
-  clearTimeout(stimer); const q=e.target.value.trim();
+  clearTimeout(stimer);
+  const q = e.target.value.trim();
   if (!q) { $('#search-dd').classList.remove('open'); return; }
   stimer = setTimeout(() => doSearch(q), 350);
 });
 $('#search-input').addEventListener('keydown', e => {
-  if (e.key==='Escape') { $('#search-dd').classList.remove('open'); e.target.value=''; }
+  if (e.key === 'Escape') { $('#search-dd').classList.remove('open'); e.target.value = ''; }
 });
-document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) $('#search-dd').classList.remove('open'); });
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) $('#search-dd').classList.remove('open');
+});
 async function doSearch(q) {
   const dd = $('#search-dd');
-  dd.innerHTML='<div style="padding:12px 14px;color:var(--muted);font-size:0.8rem;">Searching…</div>';
+  dd.innerHTML = '<div style="padding:12px 14px;color:var(--muted);font-size:0.8rem;">Searching…</div>';
   dd.classList.add('open');
   try {
     const r = await fetch(api(`/suggestions?query=${encodeURIComponent(q)}`));
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const d = await r.json();
     const items = d.suggestions || d.results || [];
-    if (!items.length) { dd.innerHTML='<div style="padding:12px 14px;color:var(--muted);font-size:0.8rem;">No results.</div>'; return; }
+    if (!items.length) {
+      dd.innerHTML = '<div style="padding:12px 14px;color:var(--muted);font-size:0.8rem;">No results.</div>';
+      return;
+    }
     const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='50'%3E%3Crect fill='%2318181f' width='36' height='50'/%3E%3C/svg%3E";
-    dd.innerHTML = items.slice(0,8).map(a => {
-      const t = a.title?.english||a.title?.romaji||a.title||'';
+    dd.innerHTML = items.slice(0, 8).map(a => {
+      const t = a.title?.english || a.title?.romaji || a.title || '';
       return `<div class="si" onclick="openAnime(${a.id});document.getElementById('search-dd').classList.remove('open');document.getElementById('search-input').value=''">
-        <img src="${a.poster||fallback}" onerror="this.src='${fallback}'">
+        <img src="${a.poster || fallback}" onerror="this.src='${fallback}'">
         <div class="si-info">
           <div class="si-title">${t}</div>
-          <div class="si-meta">${a.format||''} · ${a.year||''} · ${a.episodes||'?'} eps</div>
+          <div class="si-meta">${a.format || ''} · ${a.year || ''} · ${a.episodes || '?'} eps</div>
         </div>
       </div>`;
     }).join('');
-  } catch(e) { dd.innerHTML=`<div style="padding:12px 14px;color:var(--red);font-size:0.8rem;">${e.message}</div>`; }
+  } catch (e) {
+    dd.innerHTML = `<div style="padding:12px 14px;color:var(--red);font-size:0.8rem;">${e.message}</div>`;
+  }
 }
 
 // ─── OPEN ANIME ───────────────────────────────────────────
-async function openAnime(id, startIdx=0) {
+async function openAnime(id, startIdx = 0) {
   if (!PROXY) { showBanner(); toast('Set your proxy URL first!'); return; }
+  curAnimeId = id;
+  curEpIdx = startIdx;
+  curAudio = 'sub';
+  curEps = {};
+  allEps = [];
+  filteredEps = [];
+  curAnime = null;
+
+  $('#btn-sub').classList.add('active');
+  $('#btn-dub').classList.remove('active');
+  $('#btn-sub').classList.remove('unavailable');
+  $('#btn-dub').classList.remove('unavailable');
+  $('#ep-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.8rem;">Loading episodes…</div>';
+  $('#anime-info').innerHTML = '';
+  $('#related-section').innerHTML = '';
+  $('#prov-grp').innerHTML = '';
   showPage('watch-page');
-  curEpIdx = startIdx; curProv = 'kiwi'; curAudio = 'sub';
-  $('#btn-sub').classList.add('active'); $('#btn-dub').classList.remove('active');
-  $('#btn-sub').classList.remove('unavailable'); $('#btn-dub').classList.remove('unavailable');
-  $('#ep-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.8rem;">Loading…</div>';
-  $('#anime-info').innerHTML = ''; $('#related-section').innerHTML = '';
   showLoader('Fetching anime info…');
 
-  // FIX: fetch info and episodes independently so a 500 on episodes
-  // doesn't crash the whole page — info + player still work.
-  let infoOk = false, epOk = false;
+  // Fetch info and episodes in parallel
+  const [infoResult, epResult] = await Promise.allSettled([
+    fetch(api(`/info/${id}`)).then(r => { if (!r.ok) throw new Error(`Info ${r.status}`); return r.json(); }),
+    fetch(api(`/episodes/${id}`)).then(r => { if (!r.ok) throw new Error(`Episodes ${r.status}`); return r.json(); }),
+  ]);
 
-  try {
-    const infoR = await fetch(api(`/info/${id}`));
-    if (!infoR.ok) throw new Error(`Info ${infoR.status}`);
-    curAnime = await infoR.json();
-    infoOk = true;
+  // Handle info
+  if (infoResult.status === 'fulfilled') {
+    curAnime = infoResult.value;
     renderAnimeInfo();
     renderRelated();
-  } catch(e) {
-    console.warn('Info fetch failed:', e.message);
-    // Don't null curAnime if we already got data — only clear on HTTP error
-    if (!curAnime) curAnime = null;
+  } else {
+    console.warn('Info failed:', infoResult.reason);
   }
 
-  try {
-    const epR = await fetch(api(`/episodes/${id}`));
-    if (!epR.ok) {
-      // FIX: read body as text first so a non-JSON 500 doesn't throw
-      const body = await epR.text();
-      throw new Error(`Episodes ${epR.status}: ${body.slice(0, 80)}`);
-    }
-    const epData = await epR.json();
-    curEps = epData.providers || {};
-    epOk = true;
-  } catch(e) {
-    console.warn('Episodes fetch failed:', e.message);
-    curEps = {};
-    // FIX: show a friendly error in the sidebar instead of crashing
+  // Handle episodes
+  if (epResult.status === 'rejected') {
+    console.warn('Episodes failed:', epResult.reason);
     $('#ep-list').innerHTML = `
       <div style="padding:16px 14px;">
-        <div style="color:var(--red);font-size:0.8rem;margin-bottom:8px;">
-          ⚠ Episodes unavailable
-        </div>
+        <div style="color:var(--red);font-size:0.8rem;margin-bottom:8px;">⚠ Episodes unavailable</div>
         <div style="color:var(--muted);font-size:0.75rem;line-height:1.5;">
-          The episode source returned an error. Try a different source or come back later.
+          Could not load episodes: ${epResult.reason?.message || 'Unknown error'}
         </div>
-        <button onclick="openAnime(${id})" style="
-          margin-top:10px;padding:6px 14px;border-radius:6px;
-          background:var(--accent);border:none;color:#fff;
-          font-family:inherit;font-size:0.75rem;cursor:pointer;">
-          ↺ Retry
-        </button>
+        <button onclick="openAnime(${id})" style="margin-top:10px;padding:6px 14px;border-radius:6px;background:var(--accent);border:none;color:#fff;font-family:inherit;font-size:0.75rem;cursor:pointer;">↺ Retry</button>
       </div>`;
-    showErr('Episodes could not be loaded. See sidebar for details.');
+    showErr('Episodes could not be loaded. Check your proxy Worker URL.');
     return;
   }
 
+  const epData = epResult.value;
+  curEps = epData.providers || {};
+
+  // Pick best available provider
   const provs = Object.keys(curEps);
-  curProv = provs.includes('kiwi') ? 'kiwi' : (provs[0] || '');
+  if (provs.includes('aniwatch')) curProv = 'aniwatch';
+  else curProv = provs[0] || '';
 
   renderProvBtns(provs);
   buildEpList();
-  loadEpisode(startIdx);
+
+  if (allEps.length > 0) {
+    loadEpisode(startIdx);
+  } else {
+    hideLoader();
+    showErr('No episodes found for this anime.');
+  }
 }
 
 // ─── PROVIDERS ────────────────────────────────────────────
@@ -927,72 +937,60 @@ function renderProvBtns(provs) {
       $$('.prov-btn').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       buildEpList();
-      loadEpisode(curEpIdx);
+      if (allEps.length > 0) loadEpisode(0);
     };
     c.appendChild(b);
   });
 }
 
 // ─── EPISODE LIST ─────────────────────────────────────────
-// FIX: check which audio types are actually available for the current provider
-// and update the SUB/DUB buttons accordingly. Fall back gracefully.
 function buildEpList() {
   const pd = curEps[curProv];
   if (!pd) {
     $('#ep-list').innerHTML = '<div style="padding:14px;color:var(--muted);font-size:0.8rem;">No episodes for this provider.</div>';
     allEps = []; filteredEps = [];
-    updateAudioBtns({});
     return;
   }
 
-  // Normalise: support both pd.episodes.sub / pd.episodes.dub
-  // and legacy flat pd.episodes array
-  const epsByAudio = pd.episodes && (pd.episodes.sub || pd.episodes.dub)
-    ? pd.episodes
-    : { sub: Array.isArray(pd.episodes) ? pd.episodes : [] };
+  // Normalise episode structure
+  // Shape 1: pd.episodes.sub / pd.episodes.dub  (new aniwatch format)
+  // Shape 2: pd.episodes = flat array  (legacy)
+  let epsByAudio;
+  if (pd.episodes && (pd.episodes.sub || pd.episodes.dub)) {
+    epsByAudio = pd.episodes;
+  } else if (Array.isArray(pd.episodes)) {
+    epsByAudio = { sub: pd.episodes, dub: [] };
+  } else {
+    epsByAudio = { sub: [], dub: [] };
+  }
 
   const hasSub = !!(epsByAudio.sub && epsByAudio.sub.length);
   const hasDub = !!(epsByAudio.dub && epsByAudio.dub.length);
 
-  updateAudioBtns({ hasSub, hasDub });
+  // Update audio buttons
+  $('#btn-sub').classList.toggle('unavailable', !hasSub);
+  $('#btn-dub').classList.toggle('unavailable', !hasDub);
+  $('#btn-sub').title = hasSub ? '' : 'No subtitled version available';
+  $('#btn-dub').title = hasDub ? '' : 'No dubbed version available';
 
-  // If selected audio type has no episodes, fall back
+  // Auto-correct audio selection
   if (curAudio === 'dub' && !hasDub) {
-    if (hasSub) {
-      curAudio = 'sub';
-      $('#btn-sub').classList.add('active');
-      $('#btn-dub').classList.remove('active');
-      toast('No dub available — switched to SUB');
-    }
+    curAudio = 'sub';
+    $('#btn-sub').classList.add('active');
+    $('#btn-dub').classList.remove('active');
+    if (hasSub) toast('No dub available — switched to SUB');
   }
-  if (curAudio === 'sub' && !hasSub) {
-    if (hasDub) {
-      curAudio = 'dub';
-      $('#btn-dub').classList.add('active');
-      $('#btn-sub').classList.remove('active');
-      toast('No sub available — switched to DUB');
-    }
+  if (curAudio === 'sub' && !hasSub && hasDub) {
+    curAudio = 'dub';
+    $('#btn-dub').classList.add('active');
+    $('#btn-sub').classList.remove('active');
+    toast('No sub available — switched to DUB');
   }
 
-  allEps = epsByAudio[curAudio] || epsByAudio.sub || [];
+  allEps = epsByAudio[curAudio] || epsByAudio.sub || epsByAudio.dub || [];
   $('#ep-count').textContent = allEps.length + ' eps';
   filteredEps = allEps;
   renderEpItems();
-}
-
-// FIX: visually dim audio buttons that have no content
-function updateAudioBtns({ hasSub, hasDub }) {
-  const subBtn = $('#btn-sub');
-  const dubBtn = $('#btn-dub');
-  if (hasSub === undefined) {
-    subBtn.classList.remove('unavailable');
-    dubBtn.classList.remove('unavailable');
-    return;
-  }
-  subBtn.classList.toggle('unavailable', !hasSub);
-  dubBtn.classList.toggle('unavailable', !hasDub);
-  subBtn.title = hasSub ? '' : 'No subtitled version available';
-  dubBtn.title = hasDub ? '' : 'No dubbed version available';
 }
 
 function renderEpItems() {
@@ -1015,7 +1013,7 @@ function renderEpItems() {
       </div>
       <div class="ep-text">
         <div class="ep-text-title">${ep.title || `Episode ${ep.number || realIdx + 1}`}</div>
-        <div class="ep-text-meta">${ep.airDate || ''} ${ep.duration ? '· ' + Math.round(ep.duration / 60) + 'm' : ''}</div>
+        <div class="ep-text-meta">${ep.airDate || ''}${ep.filler ? ' · Filler' : ''}</div>
       </div>`;
     div.onclick = () => loadEpisode(realIdx);
     list.appendChild(div);
@@ -1039,89 +1037,111 @@ async function loadEpisode(idx) {
   if (!allEps[idx]) return;
   curEpIdx = idx;
   const ep = allEps[idx];
+
   $$('.ep-item').forEach(el => el.classList.toggle('active', parseInt(el.dataset.i) === idx));
-  const ae = $('.ep-item.active'); if (ae) ae.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  const ae = $('.ep-item.active');
+  if (ae) ae.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
   $('#btn-prev').disabled = idx === 0;
   $('#btn-next').disabled = idx >= allEps.length - 1;
   hideSkipBtn();
-
   showLoader('Fetching stream…');
   hideErr();
+
   try {
-    // ep.id is a full path e.g. "watch/kiwi/178005/sub/animepahe-1"
-    // ensure it starts with / but never doubles up
-    const epPath = '/' + ep.id.replace(/^\//, '');
-    const r = await fetch(api(epPath));
-    if (!r.ok) {
-      const body = await r.text();
-      throw new Error(`Server returned ${r.status}${body ? ': ' + body.slice(0, 60) : ''}`);
+    // ── KEY FIX ──────────────────────────────────────────────────────────
+    // ep.id is a full path like "watch/aniwatch/{showId}/sub/{episodeId}"
+    // The worker endpoint for aniwatch streams needs the audio category
+    // embedded in the URL path. We swap the category segment based on curAudio.
+    //
+    // For aniwatch: id format = "watch/aniwatch/{showId}/both/{episodeId}"
+    // We replace "both" with curAudio so the worker knows which category to fetch.
+    //
+    // IMPORTANT: do NOT double-encode the episode ID. Just prefix with / once.
+    let epPath = ep.id;
+
+    // Replace audio category placeholder in aniwatch IDs
+    if (epPath.startsWith('watch/aniwatch/')) {
+      // Replace the 4th segment (index 3) with curAudio
+      const parts = epPath.split('/');
+      if (parts.length >= 4) {
+        parts[3] = curAudio; // swap 'both' / 'sub' / 'dub'
+        epPath = parts.join('/');
+      }
     }
+
+    // Ensure single leading slash
+    const fetchUrl = api('/' + epPath.replace(/^\//, ''));
+    console.log('Fetching stream:', fetchUrl);
+
+    const r = await fetch(fetchUrl);
+    if (!r.ok) {
+      const body = await r.text().catch(() => '');
+      throw new Error(`Server ${r.status}${body ? ': ' + body.slice(0, 100) : ''}`);
+    }
+
     const d = await r.json();
     const streams = d.streams || d.sources || [];
-    if (!streams.length) throw new Error('No streams returned');
+    if (!streams.length) throw new Error('No streams returned from server');
+
     curIntro = d.intro || null;
     curOutro = d.outro || null;
     playHLS(streams[0].url, d.subtitles || []);
-  } catch(e) {
-    showErr('Stream unavailable: ' + e.message + '. Try another Source.');
+  } catch (e) {
+    console.error('Stream error:', e);
+    showErr(`Stream error: ${e.message}. Try switching Source or Audio.`);
   }
 }
 
-function playHLS(url, subs=[]) {
-  const v = $('#player'); hideLoader(); hideErr();
+function playHLS(url, subs = []) {
+  const v = $('#player');
+  hideLoader(); hideErr();
+
   if (Hls.isSupported()) {
-    if (window._hls) { window._hls.destroy(); }
-    const hls = new Hls({ maxBufferLength: 30 });
-    window._hls = hls; hls.loadSource(url); hls.attachMedia(v);
+    if (window._hls) { window._hls.destroy(); window._hls = null; }
+    const hls = new Hls({ maxBufferLength: 30, enableWorker: true });
+    window._hls = hls;
+    hls.loadSource(url);
+    hls.attachMedia(v);
     hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
-    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) showErr('Stream error.'); });
+    hls.on(Hls.Events.ERROR, (_, d) => {
+      if (d.fatal) {
+        console.error('HLS fatal error:', d);
+        showErr('Stream playback error. Try another source.');
+      }
+    });
   } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-    v.src = url; v.load(); v.play().catch(() => {});
-  } else { showErr('HLS not supported in this browser.'); return; }
+    v.src = url;
+    v.load();
+    v.play().catch(() => {});
+  } else {
+    showErr('HLS not supported in this browser. Try Chrome or Firefox.');
+    return;
+  }
+
+  // Attach subtitles
   while (v.querySelector('track')) v.querySelector('track').remove();
   subs.forEach((s, i) => {
     const t = document.createElement('track');
-    t.kind = 'subtitles'; t.label = s.label || 'Sub';
-    t.src = s.file || s.url || ''; t.default = i === 0;
+    t.kind = 'subtitles';
+    t.label = s.label || 'Subtitles';
+    t.src = s.file || s.url || '';
+    t.default = i === 0;
     v.appendChild(t);
   });
 }
 
-// FIX: switchAudio now guards against switching to an unavailable type
-// ─── SKIP INTRO / OUTRO ──────────────────────────────────
-function hideSkipBtn() {
-  const b = $('#skip-btn'); b.classList.remove('visible'); b._target = null;
-}
-function skipSegment() {
-  const v = $('#player'), b = $('#skip-btn');
-  if (b._target != null) { v.currentTime = b._target; }
-  hideSkipBtn();
-}
-// Poll video time to show skip button during intro/outro windows
-$('#player').addEventListener('timeupdate', () => {
-  const v = $('#player'), b = $('#skip-btn'), t = v.currentTime;
-  if (curIntro && t >= curIntro.start && t < curIntro.end - 1) {
-    b.textContent = '⏭ Skip Intro';
-    b._target = curIntro.end;
-    b.classList.add('visible');
-  } else if (curOutro && t >= curOutro.start && t < curOutro.end - 1) {
-    b.textContent = '⏭ Skip Outro';
-    b._target = curOutro.end;
-    b.classList.add('visible');
-  } else {
-    b.classList.remove('visible');
-  }
-});
-
+// ─── AUDIO SWITCH ─────────────────────────────────────────
 function switchAudio(type) {
+  // Check if desired type is available
   const pd = curEps[curProv];
-  if (pd) {
-    const epsByAudio = pd.episodes && (pd.episodes.sub || pd.episodes.dub)
-      ? pd.episodes
-      : { sub: Array.isArray(pd.episodes) ? pd.episodes : [] };
-    const available = epsByAudio[type] && epsByAudio[type].length > 0;
-    if (!available) {
-      toast(`No ${type.toUpperCase()} version available for this source`);
+  if (pd && pd.episodes && (pd.episodes.sub || pd.episodes.dub)) {
+    const list = pd.episodes[type];
+    // For aniwatch, both sub and dub use the same episode list
+    // (only the stream fetch differs), so allow the switch regardless
+    const isAniwatchProvider = curProv === 'aniwatch';
+    if (!isAniwatchProvider && (!list || !list.length)) {
+      toast(`No ${type.toUpperCase()} version available`);
       return;
     }
   }
@@ -1129,37 +1149,61 @@ function switchAudio(type) {
   $('#btn-sub').classList.toggle('active', type === 'sub');
   $('#btn-dub').classList.toggle('active', type === 'dub');
   buildEpList();
-  // Reset to ep 0 when switching audio since indices may differ
-  loadEpisode(0);
+  loadEpisode(curEpIdx);
 }
 
 function prevEp() { if (curEpIdx > 0) loadEpisode(curEpIdx - 1); }
 function nextEp() { if (curEpIdx < allEps.length - 1) loadEpisode(curEpIdx + 1); }
 function retryStream() { loadEpisode(curEpIdx); }
 
+// ─── SKIP INTRO / OUTRO ───────────────────────────────────
+function hideSkipBtn() {
+  const b = $('#skip-btn'); b.classList.remove('visible'); b._target = null;
+}
+function skipSegment() {
+  const v = $('#player'), b = $('#skip-btn');
+  if (b._target != null) v.currentTime = b._target;
+  hideSkipBtn();
+}
+$('#player').addEventListener('timeupdate', () => {
+  const v = $('#player'), b = $('#skip-btn'), t = v.currentTime;
+  if (curIntro && t >= curIntro.start && t < curIntro.end - 1) {
+    b.textContent = '⏭ Skip Intro'; b._target = curIntro.end; b.classList.add('visible');
+  } else if (curOutro && t >= curOutro.start && t < curOutro.end - 1) {
+    b.textContent = '⏭ Skip Outro'; b._target = curOutro.end; b.classList.add('visible');
+  } else {
+    b.classList.remove('visible');
+  }
+});
+
 // ─── PLAYER UI ────────────────────────────────────────────
-function showLoader(msg='Loading…') { const l=$('#player-loader'); l.style.display='flex'; $('#loader-text').textContent=msg; }
-function hideLoader() { $('#player-loader').style.display='none'; }
-function showErr(msg) { hideLoader(); const e=$('#player-err'); e.style.display='flex'; $('#err-text').textContent=msg; }
-function hideErr() { $('#player-err').style.display='none'; }
+function showLoader(msg = 'Loading…') {
+  const l = $('#player-loader'); l.style.display = 'flex';
+  $('#loader-text').textContent = msg;
+}
+function hideLoader() { $('#player-loader').style.display = 'none'; }
+function showErr(msg) { hideLoader(); const e = $('#player-err'); e.style.display = 'flex'; $('#err-text').textContent = msg; }
+function hideErr() { $('#player-err').style.display = 'none'; }
 
 // ─── ANIME INFO ───────────────────────────────────────────
 function renderAnimeInfo() {
   const a = curAnime; if (!a) return;
   const title = a.title?.english || a.title?.romaji || '';
   const img = a.coverImage?.large || a.coverImage?.medium || '';
-  const desc = stripHtml(a.description || 'No description.');
-  const score = a.averageScore; const eps = a.episodes || '?';
-  const status = a.status || ''; const year = a.seasonYear || '';
-  const scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? '#facc15' : 'var(--red)';
+  const desc = stripHtml(a.description || 'No description available.');
+  const score = a.averageScore;
+  const eps = a.episodes || '?';
+  const status = a.status || '';
+  const year = a.seasonYear || '';
+  const scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? '#facc15' : score ? 'var(--red)' : 'var(--muted)';
   $('#anime-info').innerHTML = `
     <div class="ai-head">
       <div class="ai-poster"><img src="${img}" alt="${title}"></div>
       <div class="ai-meta">
         <div class="ai-title">${title}</div>
-        <div class="ai-tags">${(a.genres||[]).slice(0,5).map(g=>`<span class="tag">${g}</span>`).join('')}</div>
+        <div class="ai-tags">${(a.genres || []).slice(0, 5).map(g => `<span class="tag">${g}</span>`).join('')}</div>
         <div class="ai-stats">
-          ${score ? `<div class="ai-stat"><div class="ai-stat-val" style="color:${scoreColor}">★ ${(score/10).toFixed(1)}</div><div class="ai-stat-lbl">Score</div></div>` : ''}
+          ${score ? `<div class="ai-stat"><div class="ai-stat-val" style="color:${scoreColor}">★ ${(score / 10).toFixed(1)}</div><div class="ai-stat-lbl">Score</div></div>` : ''}
           <div class="ai-stat"><div class="ai-stat-val">${eps}</div><div class="ai-stat-lbl">Episodes</div></div>
           <div class="ai-stat"><div class="ai-stat-val">${year}</div><div class="ai-stat-lbl">Year</div></div>
           <div class="ai-stat"><div class="ai-stat-val" style="font-size:0.72rem">${status}</div><div class="ai-stat-lbl">Status</div></div>
@@ -1178,16 +1222,14 @@ function toggleDesc() {
 // ─── RELATED ──────────────────────────────────────────────
 function renderRelated() {
   const a = curAnime; if (!a) return;
-  // relations may be an array or object map like { SEQUEL: [...], PREQUEL: [...] }
   let relArr = [];
-  if (Array.isArray(a.relations)) {
-    relArr = a.relations;
-  } else if (a.relations && typeof a.relations === 'object') {
+  if (Array.isArray(a.relations)) relArr = a.relations;
+  else if (a.relations && typeof a.relations === 'object') {
     relArr = Object.values(a.relations).flat().filter(Boolean);
   }
   const recArr = Array.isArray(a.recommendations) ? a.recommendations : [];
-  const items = [...relArr.slice(0,6), ...recArr.slice(0,4)];
-  if (!items.length) { $('#related-section').innerHTML=''; return; }
+  const items = [...relArr.slice(0, 6), ...recArr.slice(0, 4)].filter(r => r.id);
+  if (!items.length) { $('#related-section').innerHTML = ''; return; }
   const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='147'%3E%3Crect fill='%2318181f' width='110' height='147'/%3E%3C/svg%3E";
   $('#related-section').innerHTML = `
     <div class="section-title">Related & Recommended</div>
@@ -1209,7 +1251,7 @@ function renderRelated() {
 // ─── PAGE NAV ─────────────────────────────────────────────
 function showPage(id) {
   $$('.page').forEach(p => p.classList.remove('active'));
-  $('#'+id).classList.add('active');
+  $('#' + id).classList.add('active');
   window.scrollTo(0, 0);
 }
 function showHome() {
