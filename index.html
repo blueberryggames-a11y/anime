@@ -43,7 +43,6 @@ nav{position:sticky;top:0;z-index:200;height:54px;display:flex;align-items:cente
 
 .page{display:none}.page.active{display:block}
 
-/* HOME */
 .hero{position:relative;width:100%;height:450px;overflow:hidden}
 .hbg{position:absolute;inset:0;background-size:cover;background-position:center 25%;transition:background-image .5s;filter:brightness(.22) saturate(1.4)}
 .hbg::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,8,16,.99) 22%,rgba(8,8,16,.35) 62%,transparent),linear-gradient(to top,var(--bg) 0%,transparent 30%)}
@@ -87,7 +86,6 @@ nav{position:sticky;top:0;z-index:200;height:54px;display:flex;align-items:cente
 .skel{border-radius:var(--r);aspect-ratio:3/4;background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shim 1.3s infinite}
 @keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-/* WATCH */
 .wl{display:grid;grid-template-columns:1fr 316px;max-width:1380px;margin:0 auto}
 .pcol{border-right:1px solid var(--border);min-width:0}
 .pwrap{position:relative;width:100%;background:#000;aspect-ratio:16/9}
@@ -97,7 +95,7 @@ video#player{width:100%;height:100%;display:block;background:#000}
 @keyframes sp{to{transform:rotate(360deg)}}
 .ptxt{font-size:.79rem;color:var(--muted);text-align:center;max-width:280px;line-height:1.5}
 .perr{color:var(--red);font-size:.79rem;text-align:center;max-width:320px;line-height:1.6}
-.perr small{display:block;margin-top:4px;color:var(--muted);font-size:.7rem}
+.perr small{display:block;margin-top:5px;color:var(--muted);font-size:.69rem}
 .rbtn{margin-top:4px;padding:6px 16px;border-radius:5px;background:var(--accent);border:none;color:#fff;font-family:inherit;font-size:.76rem;cursor:pointer}
 .rbtn:hover{background:var(--accent2)}
 #skip-btn{position:absolute;bottom:52px;right:14px;z-index:11;padding:7px 16px;border-radius:5px;background:rgba(18,18,32,.9);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);color:#fff;font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;display:none;transition:background .14s}
@@ -144,10 +142,10 @@ video#player{width:100%;height:100%;display:block;background:#000}
 .relct{font-size:.66rem;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .relcf{font-size:.59rem;color:var(--muted);margin-top:2px}
 
-/* Debug log */
-#dbg{position:fixed;bottom:0;left:0;right:0;max-height:160px;overflow-y:auto;background:rgba(0,0,0,.88);font-family:'Space Mono',monospace;font-size:.65rem;color:#a29bfe;padding:6px 10px;z-index:9000;display:none;border-top:1px solid var(--border)}
+/* Debug panel */
+#dbg{position:fixed;bottom:0;left:0;right:0;max-height:180px;overflow-y:auto;background:rgba(5,5,14,.95);font-family:'Space Mono',monospace;font-size:.62rem;color:#a29bfe;padding:6px 10px 24px;z-index:9000;display:none;border-top:1px solid var(--border)}
 #dbg.on{display:block}
-#dbg-toggle{position:fixed;bottom:6px;right:6px;z-index:9001;padding:3px 7px;border-radius:4px;background:var(--bg4);border:1px solid var(--border);color:var(--muted);font-size:.65rem;cursor:pointer;font-family:inherit}
+#dbg-toggle{position:fixed;bottom:6px;right:6px;z-index:9001;padding:3px 8px;border-radius:4px;background:var(--bg4);border:1px solid var(--border);color:var(--muted);font-size:.65rem;cursor:pointer;font-family:inherit}
 
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(65px);background:var(--bg3);border:1px solid var(--border);padding:8px 17px;border-radius:7px;font-size:.79rem;z-index:9999;transition:transform .26s;box-shadow:0 5px 18px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap}
 #toast.show{transform:translateX(-50%) translateY(0)}
@@ -159,7 +157,7 @@ video#player{width:100%;height:100%;display:block;background:#000}
 <body>
 
 <div id="proxy-banner">
-  <span>⚙ <strong>Cloudflare Worker URL</strong> — needed to bypass CORS &nbsp;
+  <span>⚙ <strong>Cloudflare Worker URL</strong> — needed to proxy streams &nbsp;
     <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">(deploy worker.js →)</a>
   </span>
   <input type="text" id="proxy-input" placeholder="https://your-worker.workers.dev">
@@ -186,17 +184,15 @@ video#player{width:100%;height:100%;display:block;background:#000}
 <div class="page active" id="home">
   <div class="hero">
     <div class="hbg" id="hbg"></div>
-    <div class="hc">
-      <div class="hi">
-        <div class="hchips" id="hchips"></div>
-        <div class="htitle" id="htitle">Loading…</div>
-        <div class="hdesc" id="hdesc"></div>
-        <div class="hbtns">
-          <button class="bw" id="hwat">▶ Watch Now</button>
-          <button class="bg" id="hinf">ℹ Details</button>
-        </div>
+    <div class="hc"><div class="hi">
+      <div class="hchips" id="hchips"></div>
+      <div class="htitle" id="htitle">Loading…</div>
+      <div class="hdesc" id="hdesc"></div>
+      <div class="hbtns">
+        <button class="bw" id="hwat">▶ Watch Now</button>
+        <button class="bg" id="hinf">ℹ Details</button>
       </div>
-    </div>
+    </div></div>
     <div class="hdots" id="hdots"></div>
   </div>
   <div class="gstrip">
@@ -228,7 +224,6 @@ video#player{width:100%;height:100%;display:block;background:#000}
   <div class="wl">
     <div class="pcol">
       <div class="pwrap">
-        <!-- Native <video> only — NO iframes, Miruro blocks X-Frame-Options -->
         <video id="player" controls playsinline></video>
         <div class="pmsg" id="pmsg">
           <div class="spin"></div>
@@ -244,12 +239,8 @@ video#player{width:100%;height:100%;display:block;background:#000}
         </div>
         <div class="csep"></div>
         <div class="nbtns">
-          <button class="enav" id="btn-prev" onclick="prevEp()">
-            <svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4v16H3V4h2z"/></svg>Prev
-          </button>
-          <button class="enav" id="btn-next" onclick="nextEp()">Next
-            <svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zm14 0v16h-2V4h2z"/></svg>
-          </button>
+          <button class="enav" id="btn-prev" onclick="prevEp()"><svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4v16H3V4h2z"/></svg>Prev</button>
+          <button class="enav" id="btn-next" onclick="nextEp()">Next<svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zm14 0v16h-2V4h2z"/></svg></button>
         </div>
       </div>
       <div class="ainfo" id="ainfo"></div>
@@ -268,39 +259,46 @@ video#player{width:100%;height:100%;display:block;background:#000}
 <button id="dbg-toggle" onclick="document.getElementById('dbg').classList.toggle('on')">dbg</button>
 
 <script>
-// ── DEBUG LOG ──────────────────────────────────────────────────────────────────
+// ── DEBUG ──────────────────────────────────────────────────────────────────────
 const dbgEl = document.getElementById('dbg');
-function log(...args) {
-  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
-  console.log('[Animura]', msg);
-  const line = document.createElement('div');
-  line.textContent = new Date().toISOString().slice(11,19) + ' ' + msg;
-  dbgEl.appendChild(line);
-  dbgEl.scrollTop = dbgEl.scrollHeight;
+function log(...a) {
+  const msg = a.map(x => typeof x === 'object' ? JSON.stringify(x) : String(x)).join(' ');
+  console.log('[A]', msg);
+  const d = document.createElement('div'); d.textContent = new Date().toISOString().slice(11,19)+' '+msg;
+  dbgEl.appendChild(d); dbgEl.scrollTop = dbgEl.scrollHeight;
 }
 
 // ── PROXY ──────────────────────────────────────────────────────────────────────
 let PROXY = localStorage.getItem('animura_proxy') || '';
 
-/**
- * Fetch a URL through the worker's /page route.
- * The worker handles CORS so we can read the response body.
- */
+function workerUrl(route, params) {
+  if (!PROXY) { showBanner(); throw new Error('No Worker URL — paste it in the banner above.'); }
+  const base = PROXY.replace(/\/$/, '');
+  const qs = new URLSearchParams(params).toString();
+  return `${base}${route}${qs ? '?' + qs : ''}`;
+}
+
 async function pFetch(url) {
-  if (!PROXY) { showBanner(); throw new Error('No Worker URL configured — paste it in the banner above.'); }
-  const workerUrl = PROXY.replace(/\/$/, '') + '/page?url=' + encodeURIComponent(url);
-  log('pFetch:', workerUrl);
-  const r = await fetch(workerUrl);
-  if (!r.ok) throw new Error(`Worker returned HTTP ${r.status} for ${url}`);
+  const dest = workerUrl('/page', { url });
+  log('pFetch', dest.slice(0,100));
+  const r = await fetch(dest);
+  if (!r.ok) throw new Error(`Worker /page HTTP ${r.status}`);
   return r;
 }
 
-/**
- * Return a proxied stream URL (worker rewrites m3u8 segment lines).
- */
-function pStream(url) {
-  if (!PROXY) return url;
-  return PROXY.replace(/\/$/, '') + '/stream?url=' + encodeURIComponent(url);
+// Route the raw m3u8 URL through /stream so segments get proxied
+function pStream(rawUrl) {
+  if (!PROXY) return rawUrl;
+  return workerUrl('/stream', { url: rawUrl });
+}
+
+// Call /extract on the worker — it runs all Miruro API shapes server-side
+async function pExtract(id, ep, cat, title) {
+  const dest = workerUrl('/extract', { id, ep, cat, title: title || '' });
+  log('pExtract', dest.slice(0,120));
+  const r = await fetch(dest);
+  const json = await r.json();
+  return json; // { url, intro, outro, via } or { error, log }
 }
 
 function saveProxy() {
@@ -309,19 +307,16 @@ function saveProxy() {
   PROXY = v; localStorage.setItem('animura_proxy', v);
   updatePBtn(); dismissBanner(); toast('✓ Saved!');
 }
-function dismissBanner() {
-  document.getElementById('proxy-banner').style.display = 'none';
-  if (PROXY) localStorage.setItem('animura_bok', '1');
-}
-function showBanner() { document.getElementById('proxy-banner').style.display = 'flex'; }
+function dismissBanner() { document.getElementById('proxy-banner').style.display = 'none'; if (PROXY) localStorage.setItem('animura_bok','1'); }
+function showBanner()   { document.getElementById('proxy-banner').style.display = 'flex'; }
 function toggleBanner() { const b = document.getElementById('proxy-banner'); b.style.display = b.style.display === 'none' ? 'flex' : 'none'; }
-function updatePBtn() { const b = document.getElementById('pbtn'); b.textContent = PROXY ? '✓ Worker' : '⚙ Worker'; b.classList.toggle('ok', !!PROXY); }
+function updatePBtn()   { const b = document.getElementById('pbtn'); b.textContent = PROXY ? '✓ Worker' : '⚙ Worker'; b.classList.toggle('ok', !!PROXY); }
 if (PROXY) { document.getElementById('proxy-input').value = PROXY; updatePBtn(); if (localStorage.getItem('animura_bok')) document.getElementById('proxy-banner').style.display = 'none'; }
 
 // ── ANILIST ────────────────────────────────────────────────────────────────────
 const AL = 'https://graphql.anilist.co';
 async function gql(q, v = {}) {
-  const r = await fetch(AL, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ query: q, variables: v }) });
+  const r = await fetch(AL, { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({query:q,variables:v}) });
   if (!r.ok) throw new Error('AniList ' + r.status);
   const { data, errors } = await r.json();
   if (errors?.length) throw new Error(errors[0].message);
@@ -330,403 +325,275 @@ async function gql(q, v = {}) {
 const F = `id idMal title{romaji english}description(asHtml:false)coverImage{extraLarge large medium}bannerImage format status seasonYear episodes averageScore genres studios{nodes{name isAnimationStudio}}`;
 async function aPage(vars) {
   const s = vars.sort || 'TRENDING_DESC';
-  const q = `query($page:Int,$perPage:Int${vars.search !== undefined ? ',$search:String' : ''}${vars.genre ? ',$genre:String' : ''}${vars.season ? ',$season:MediaSeason,$year:Int' : ''}${vars.status ? ',$status:MediaStatus' : ''}){Page(page:$page,perPage:$perPage){pageInfo{hasNextPage}media(type:ANIME,sort:[${s}]${vars.search !== undefined ? ',search:$search' : ''}${vars.genre ? ',genre:$genre' : ''}${vars.season ? ',season:$season,seasonYear:$year' : ''}${vars.status ? ',status:$status' : ''}){${F}}}}`;
+  const q = `query($page:Int,$perPage:Int${vars.search!==undefined?',$search:String':''}${vars.genre?',$genre:String':''}${vars.season?',$season:MediaSeason,$year:Int':''}${vars.status?',$status:MediaStatus':''}){Page(page:$page,perPage:$perPage){pageInfo{hasNextPage}media(type:ANIME,sort:[${s}]${vars.search!==undefined?',search:$search':''}${vars.genre?',genre:$genre':''}${vars.season?',season:$season,seasonYear:$year':''}${vars.status?',status:$status':''}){${F}}}}`;
   const d = await gql(q, vars);
-  return { results: d.Page.media || [], hasNextPage: d.Page.pageInfo.hasNextPage };
+  return { results: d.Page.media||[], hasNextPage: d.Page.pageInfo.hasNextPage };
 }
 
 // ── UTILS ──────────────────────────────────────────────────────────────────────
 const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
-const strip = h => h ? h.replace(/<[^>]*>/g, '') : '';
+const strip = h => h ? h.replace(/<[^>]*>/g,'') : '';
 const FB = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='3' height='4'%3E%3Crect fill='%23141422' width='3' height='4'/%3E%3C/svg%3E";
-function toast(msg, ms = 2600) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), ms); }
-function mkSlug(t) { return t.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-'); }
+function toast(msg,ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
+function mkSlug(t){ return t.toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').replace(/-+/g,'-'); }
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
-let spotlight = [], spIdx = 0, spTimer;
-let curAnime = null, curAudio = 'sub', curEpIdx = 0;
-let allEps = [], filteredEps = [];
-let curTab = 'TRENDING_DESC', curGenre = '', curPage = 1;
-let intro = null, outro = null, retryIdx = null;
+let spotlight=[], spIdx=0, spTimer;
+let curAnime=null, curAudio='sub', curEpIdx=0;
+let allEps=[], filteredEps=[];
+let curTab='TRENDING_DESC', curGenre='', curPage=1;
+let intro=null, outro=null, retryIdx=null;
 
 // ── SPOTLIGHT ─────────────────────────────────────────────────────────────────
 async function loadSpotlight() {
-  try {
-    const d = await aPage({ page: 1, perPage: 12, sort: 'TRENDING_DESC' });
-    spotlight = d.results.filter(a => a.bannerImage);
-    if (!spotlight.length) return;
-    renderSpot(0); buildDots(); startTimer();
-  } catch (e) { console.warn(e); }
+  try { const d=await aPage({page:1,perPage:12,sort:'TRENDING_DESC'}); spotlight=d.results.filter(a=>a.bannerImage); if(!spotlight.length)return; renderSpot(0); buildDots(); startTimer(); } catch(e){ console.warn(e); }
 }
 function renderSpot(i) {
-  const a = spotlight[i]; if (!a) return;
-  $('#hbg').style.backgroundImage = `url(${a.bannerImage || ''})`;
-  $('#htitle').textContent = a.title?.english || a.title?.romaji || '';
-  $('#hdesc').textContent = strip(a.description || '');
-  const tc = $('#hchips'); tc.innerHTML = '';
-  (a.genres || []).slice(0, 3).forEach(g => { const s = document.createElement('span'); s.className = 'chip'; s.textContent = g; tc.appendChild(s); });
-  $('#hwat').onclick = $('#hinf').onclick = () => openAnime(a.id);
-  $$('.dot').forEach((d, j) => d.classList.toggle('active', j === i));
+  const a=spotlight[i]; if(!a)return;
+  $('#hbg').style.backgroundImage=`url(${a.bannerImage||''})`;
+  $('#htitle').textContent=a.title?.english||a.title?.romaji||'';
+  $('#hdesc').textContent=strip(a.description||'');
+  const tc=$('#hchips'); tc.innerHTML='';
+  (a.genres||[]).slice(0,3).forEach(g=>{ const s=document.createElement('span'); s.className='chip'; s.textContent=g; tc.appendChild(s); });
+  $('#hwat').onclick=$('#hinf').onclick=()=>openAnime(a.id);
+  $$('.dot').forEach((d,j)=>d.classList.toggle('active',j===i));
 }
 function buildDots() {
-  const c = $('#hdots'); c.innerHTML = '';
-  spotlight.slice(0, 8).forEach((_, i) => {
-    const d = document.createElement('button'); d.className = 'dot' + (i === 0 ? ' active' : '');
-    d.onclick = () => { clearTimeout(spTimer); spIdx = i; renderSpot(i); startTimer(); };
-    c.appendChild(d);
-  });
+  const c=$('#hdots'); c.innerHTML='';
+  spotlight.slice(0,8).forEach((_,i)=>{ const d=document.createElement('button'); d.className='dot'+(i===0?' active':''); d.onclick=()=>{ clearTimeout(spTimer); spIdx=i; renderSpot(i); startTimer(); }; c.appendChild(d); });
 }
-function startTimer() { spTimer = setTimeout(() => { spIdx = (spIdx + 1) % Math.min(spotlight.length, 8); renderSpot(spIdx); startTimer(); }, 6000); }
+function startTimer(){ spTimer=setTimeout(()=>{ spIdx=(spIdx+1)%Math.min(spotlight.length,8); renderSpot(spIdx); startTimer(); },6000); }
 
 // ── GRID ──────────────────────────────────────────────────────────────────────
 async function loadGrid(tab, page, genre) {
-  const g = $('#mgrid');
-  if (page === 1) g.innerHTML = Array(18).fill('<div class="skel"></div>').join('');
+  const g=$('#mgrid');
+  if(page===1) g.innerHTML=Array(18).fill('<div class="skel"></div>').join('');
   try {
     let d;
-    if (tab === 'upcoming') d = await aPage({ page, perPage: 24, sort: 'POPULARITY_DESC', status: 'NOT_YET_RELEASED' });
-    else if (tab === 'recent') {
-      const m = new Date().getMonth() + 1;
-      const s = m <= 3 ? 'WINTER' : m <= 6 ? 'SPRING' : m <= 9 ? 'SUMMER' : 'FALL';
-      d = await aPage({ page, perPage: 24, sort: 'TRENDING_DESC', season: s, year: new Date().getFullYear() });
-    } else {
-      const v = { page, perPage: 24, sort: tab }; if (genre) v.genre = genre;
-      d = await aPage(v);
-    }
-    if (page === 1) g.innerHTML = '';
-    d.results.forEach(a => g.appendChild(mkCard(a)));
-    if (!d.results.length && page === 1) g.innerHTML = '<div style="color:var(--muted);padding:20px;grid-column:1/-1">No results.</div>';
-  } catch (e) {
-    if (page === 1) g.innerHTML = `<div style="color:var(--red);padding:20px;grid-column:1/-1">Error: ${e.message}</div>`;
-  }
+    if(tab==='upcoming') d=await aPage({page,perPage:24,sort:'POPULARITY_DESC',status:'NOT_YET_RELEASED'});
+    else if(tab==='recent'){ const m=new Date().getMonth()+1; const s=m<=3?'WINTER':m<=6?'SPRING':m<=9?'SUMMER':'FALL'; d=await aPage({page,perPage:24,sort:'TRENDING_DESC',season:s,year:new Date().getFullYear()}); }
+    else { const v={page,perPage:24,sort:tab}; if(genre)v.genre=genre; d=await aPage(v); }
+    if(page===1) g.innerHTML='';
+    d.results.forEach(a=>g.appendChild(mkCard(a)));
+    if(!d.results.length&&page===1) g.innerHTML='<div style="color:var(--muted);padding:20px;grid-column:1/-1">No results.</div>';
+  } catch(e){ if(page===1) g.innerHTML=`<div style="color:var(--red);padding:20px;grid-column:1/-1">Error: ${e.message}</div>`; }
 }
 function mkCard(a) {
-  const div = document.createElement('div'); div.className = 'card';
-  const img = a.coverImage?.large || FB;
-  div.innerHTML = `<img src="${img}" alt="" loading="lazy" onerror="this.src='${FB}'"><div class="cov"><div class="ct">${a.title?.english || a.title?.romaji || ''}</div><div class="cm">${a.format || ''} ${a.seasonYear || ''}</div></div>${a.averageScore ? `<div class="sb">★ ${(a.averageScore / 10).toFixed(1)}</div>` : ''}${a.episodes ? `<div class="eb">${a.episodes}ep</div>` : ''}<div class="pov"><div class="pc"><svg width="15" height="15" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`;
-  div.onclick = () => openAnime(a.id);
-  return div;
+  const div=document.createElement('div'); div.className='card';
+  const img=a.coverImage?.large||FB;
+  div.innerHTML=`<img src="${img}" alt="" loading="lazy" onerror="this.src='${FB}'"><div class="cov"><div class="ct">${a.title?.english||a.title?.romaji||''}</div><div class="cm">${a.format||''} ${a.seasonYear||''}</div></div>${a.averageScore?`<div class="sb">★ ${(a.averageScore/10).toFixed(1)}</div>`:''} ${a.episodes?`<div class="eb">${a.episodes}ep</div>`:''}<div class="pov"><div class="pc"><svg width="15" height="15" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`;
+  div.onclick=()=>openAnime(a.id); return div;
 }
-function loadMore() { curPage++; loadGrid(curTab, curPage, curGenre); }
-function setTab(btn, tab) {
-  $$('.ntab').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-  curTab = tab; curGenre = ''; curPage = 1;
-  $$('.gchip').forEach(c => c.classList.remove('active')); $('.gchip').classList.add('active');
-  const L = { TRENDING_DESC: 'Trending', POPULARITY_DESC: 'Popular', upcoming: 'Upcoming', recent: 'Current Season' };
-  $('#gtitle').textContent = L[tab] || tab;
-  loadGrid(tab, 1, '');
-}
-function fG(btn, genre) {
-  $$('.gchip').forEach(c => c.classList.remove('active')); btn.classList.add('active');
-  curGenre = genre; curPage = 1; $('#gtitle').textContent = genre || 'All';
-  loadGrid(curTab, 1, genre);
-}
+function loadMore(){ curPage++; loadGrid(curTab,curPage,curGenre); }
+function setTab(btn,tab){ $$('.ntab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); curTab=tab; curGenre=''; curPage=1; $$('.gchip').forEach(c=>c.classList.remove('active')); $('.gchip').classList.add('active'); const L={TRENDING_DESC:'Trending',POPULARITY_DESC:'Popular',upcoming:'Upcoming',recent:'Current Season'}; $('#gtitle').textContent=L[tab]||tab; loadGrid(tab,1,''); }
+function fG(btn,genre){ $$('.gchip').forEach(c=>c.classList.remove('active')); btn.classList.add('active'); curGenre=genre; curPage=1; $('#gtitle').textContent=genre||'All'; loadGrid(curTab,1,genre); }
 
 // ── SEARCH ────────────────────────────────────────────────────────────────────
 let stm;
-$('#search-input').addEventListener('input', e => {
-  clearTimeout(stm); const q = e.target.value.trim();
-  if (!q) { $('#sdd').classList.remove('open'); return; }
-  stm = setTimeout(() => doSearch(q), 320);
-});
-$('#search-input').addEventListener('keydown', e => { if (e.key === 'Escape') { $('#sdd').classList.remove('open'); e.target.value = ''; } });
-document.addEventListener('click', e => { if (!e.target.closest('.swrap')) $('#sdd').classList.remove('open'); });
+$('#search-input').addEventListener('input',e=>{ clearTimeout(stm); const q=e.target.value.trim(); if(!q){$('#sdd').classList.remove('open');return} stm=setTimeout(()=>doSearch(q),320); });
+$('#search-input').addEventListener('keydown',e=>{ if(e.key==='Escape'){$('#sdd').classList.remove('open');e.target.value='';} });
+document.addEventListener('click',e=>{ if(!e.target.closest('.swrap'))$('#sdd').classList.remove('open'); });
 async function doSearch(q) {
-  const dd = $('#sdd');
-  dd.innerHTML = '<div style="padding:10px 12px;color:var(--muted);font-size:.76rem;">Searching…</div>'; dd.classList.add('open');
+  const dd=$('#sdd'); dd.innerHTML='<div style="padding:10px 12px;color:var(--muted);font-size:.76rem;">Searching…</div>'; dd.classList.add('open');
   try {
-    const d = await gql(`query($s:String){Page(page:1,perPage:8){media(type:ANIME,search:$s,sort:[SEARCH_MATCH]){id title{romaji english}coverImage{large}format seasonYear episodes}}}`, { s: q });
-    const items = d.Page.media || [];
-    if (!items.length) { dd.innerHTML = '<div style="padding:10px 12px;color:var(--muted);font-size:.76rem;">No results.</div>'; return; }
-    dd.innerHTML = items.map(a => `<div class="si" onclick="openAnime(${a.id});document.getElementById('sdd').classList.remove('open');document.getElementById('search-input').value=''"><img src="${a.coverImage?.large || FB}" onerror="this.src='${FB}'"><div><div class="si-t">${a.title?.english || a.title?.romaji || ''}</div><div class="si-m">${a.format || ''} · ${a.seasonYear || ''} · ${a.episodes || '?'} eps</div></div></div>`).join('');
-  } catch (e) { dd.innerHTML = `<div style="padding:10px 12px;color:var(--red);font-size:.76rem;">${e.message}</div>`; }
+    const d=await gql(`query($s:String){Page(page:1,perPage:8){media(type:ANIME,search:$s,sort:[SEARCH_MATCH]){id title{romaji english}coverImage{large}format seasonYear episodes}}}`,{s:q});
+    const items=d.Page.media||[];
+    if(!items.length){dd.innerHTML='<div style="padding:10px 12px;color:var(--muted);font-size:.76rem;">No results.</div>';return;}
+    dd.innerHTML=items.map(a=>`<div class="si" onclick="openAnime(${a.id});document.getElementById('sdd').classList.remove('open');document.getElementById('search-input').value=''"><img src="${a.coverImage?.large||FB}" onerror="this.src='${FB}'"><div><div class="si-t">${a.title?.english||a.title?.romaji||''}</div><div class="si-m">${a.format||''} · ${a.seasonYear||''} · ${a.episodes||'?'} eps</div></div></div>`).join('');
+  } catch(e){ dd.innerHTML=`<div style="padding:10px 12px;color:var(--red);font-size:.76rem;">${e.message}</div>`; }
 }
 
 // ── OPEN ANIME ────────────────────────────────────────────────────────────────
-async function openAnime(id, startIdx = 0) {
+async function openAnime(id, startIdx=0) {
   showPage('watch');
-  curAnime = null; allEps = []; filteredEps = []; curEpIdx = startIdx; curAudio = 'sub';
+  curAnime=null; allEps=[]; filteredEps=[]; curEpIdx=startIdx; curAudio='sub';
   $('#btn-sub').classList.add('active'); $('#btn-dub').classList.remove('active');
-  $('#eplist').innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:.76rem;">Loading…</div>';
-  $('#ainfo').innerHTML = ''; $('#relsec').style.display = 'none';
-  setMsg('Fetching info…', true);
-  const q = `query($id:Int){Media(id:$id,type:ANIME){${F}relations{edges{relationType node{id title{romaji english}coverImage{large}format}}}recommendations(sort:RATING_DESC,perPage:10){nodes{rating mediaRecommendation{id title{romaji english}coverImage{large}format}}}}}`;
-  try {
-    const d = await gql(q, { id });
-    curAnime = d.Media;
-    renderInfo(); renderRel();
-    await loadEpList(id);
-  } catch (e) { setMsg(null, false, true, e.message); }
+  $('#eplist').innerHTML='<div style="padding:18px;text-align:center;color:var(--muted);font-size:.76rem;">Loading…</div>';
+  $('#ainfo').innerHTML=''; $('#relsec').style.display='none';
+  setMsg('Fetching info…',true);
+  const q=`query($id:Int){Media(id:$id,type:ANIME){${F}relations{edges{relationType node{id title{romaji english}coverImage{large}format}}}recommendations(sort:RATING_DESC,perPage:10){nodes{rating mediaRecommendation{id title{romaji english}coverImage{large}format}}}}}`;
+  try { const d=await gql(q,{id}); curAnime=d.Media; renderInfo(); renderRel(); await loadEpList(id); }
+  catch(e){ setMsg(null,false,true,e.message); }
 }
 
 // ── EPISODE LIST ──────────────────────────────────────────────────────────────
 async function loadEpList(id) {
-  const endpoints = [
+  const endpoints=[
     `https://www.miruro.tv/api/v2/episodes?id=${id}`,
     `https://www.miruro.tv/api/episodes?id=${id}`,
     `https://www.miruro.tv/api/v1/episodes/${id}`,
   ];
-  let epList = [];
-  for (const url of endpoints) {
-    try {
-      const r = await pFetch(url);
-      const text = await r.text();
-      let json; try { json = JSON.parse(text); } catch { log('ep parse fail:', url); continue; }
-      if (Array.isArray(json) && json.length) { epList = json; log('episodes from:', url, '→', json.length); break; }
-      if (Array.isArray(json?.episodes) && json.episodes.length) { epList = json.episodes; log('episodes.episodes from:', url, '→', json.episodes.length); break; }
-      if (Array.isArray(json?.data) && json.data.length) { epList = json.data; log('episodes.data from:', url, '→', json.data.length); break; }
-    } catch (e) { log('ep endpoint failed:', url, e.message); }
+  let epList=[];
+  for(const url of endpoints){
+    try{
+      const r=await pFetch(url); const text=await r.text();
+      let json; try{ json=JSON.parse(text); }catch{ continue; }
+      if(Array.isArray(json)&&json.length){ epList=json; log('eps from',url,'→',json.length); break; }
+      if(Array.isArray(json?.episodes)&&json.episodes.length){ epList=json.episodes; break; }
+      if(Array.isArray(json?.data)&&json.data.length){ epList=json.data; break; }
+    }catch(e){ log('ep endpoint fail:',e.message); }
   }
-  if (!epList.length) {
-    const cnt = curAnime?.episodes || 1;
-    log('fallback: generating', cnt, 'episode stubs');
-    epList = Array.from({ length: cnt }, (_, i) => ({ number: i + 1, title: `Episode ${i + 1}` }));
+  if(!epList.length){
+    const cnt=curAnime?.episodes||1; log('stub',cnt,'eps');
+    epList=Array.from({length:cnt},(_,i)=>({number:i+1,title:`Episode ${i+1}`}));
   }
-  allEps = epList.map((ep, i) => ({
-    number: ep.number ?? ep.ep ?? (i + 1),
-    title: ep.title || ep.name || `Episode ${ep.number ?? i + 1}`,
-    id: ep.id || ep.episodeId || String(ep.number ?? i + 1),
+  allEps=epList.map((ep,i)=>({
+    number: ep.number??ep.ep??(i+1),
+    title:  ep.title||ep.name||`Episode ${ep.number??i+1}`,
+    id:     ep.id||ep.episodeId||String(ep.number??i+1),
   }));
-  filteredEps = allEps;
-  $('#epct').textContent = allEps.length + ' eps';
-  renderEpItems();
-  loadEp(curEpIdx);
+  filteredEps=allEps;
+  $('#epct').textContent=allEps.length+' eps';
+  renderEpItems(); loadEp(curEpIdx);
 }
 
-function renderEpItems() {
-  const list = $('#eplist'); list.innerHTML = '';
-  if (!filteredEps.length) { list.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:.76rem;">No episodes.</div>'; return; }
-  filteredEps.forEach(ep => {
-    const ri = allEps.findIndex(e => e.number === ep.number);
-    const div = document.createElement('div');
-    div.className = 'epi' + (ri === curEpIdx ? ' active' : '');
-    div.dataset.i = ri;
-    div.innerHTML = `<div class="epn">${ep.number}</div><div class="ept">${ep.title}</div>`;
-    div.onclick = () => loadEp(ri);
-    list.appendChild(div);
-  });
-  const ae = $('.epi.active'); if (ae) ae.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+function renderEpItems(){
+  const list=$('#eplist'); list.innerHTML='';
+  if(!filteredEps.length){ list.innerHTML='<div style="padding:12px;color:var(--muted);font-size:.76rem;">No episodes.</div>'; return; }
+  filteredEps.forEach(ep=>{ const ri=allEps.findIndex(e=>e.number===ep.number); const div=document.createElement('div'); div.className='epi'+(ri===curEpIdx?' active':''); div.dataset.i=ri; div.innerHTML=`<div class="epn">${ep.number}</div><div class="ept">${ep.title}</div>`; div.onclick=()=>loadEp(ri); list.appendChild(div); });
+  const ae=$('.epi.active'); if(ae)ae.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
-$('#epf').addEventListener('input', e => {
-  const q = e.target.value.toLowerCase().trim();
-  filteredEps = q ? allEps.filter(ep => ep.title.toLowerCase().includes(q) || String(ep.number).includes(q)) : allEps;
-  renderEpItems();
-});
+$('#epf').addEventListener('input',e=>{ const q=e.target.value.toLowerCase().trim(); filteredEps=q?allEps.filter(ep=>ep.title.toLowerCase().includes(q)||String(ep.number).includes(q)):allEps; renderEpItems(); });
 
 // ── LOAD EPISODE ──────────────────────────────────────────────────────────────
-async function loadEp(idx) {
-  if (!allEps[idx]) return;
-  curEpIdx = idx; retryIdx = idx;
-  const ep = allEps[idx];
-  $$('.epi').forEach(el => el.classList.toggle('active', parseInt(el.dataset.i) === idx));
-  const ae = $('.epi.active'); if (ae) ae.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  $('#btn-prev').disabled = idx === 0;
-  $('#btn-next').disabled = idx >= allEps.length - 1;
-  intro = null; outro = null; $('#skip-btn').classList.remove('on');
-  setMsg('Fetching stream…', true);
-  try {
-    const url = await getStream(ep);
-    if (!url) throw new Error('No stream URL found — all sources exhausted.');
-    log('▶ playing:', url);
+async function loadEp(idx){
+  if(!allEps[idx])return;
+  curEpIdx=idx; retryIdx=idx;
+  const ep=allEps[idx];
+  $$('.epi').forEach(el=>el.classList.toggle('active',parseInt(el.dataset.i)===idx));
+  const ae=$('.epi.active'); if(ae)ae.scrollIntoView({block:'nearest',behavior:'smooth'});
+  $('#btn-prev').disabled=idx===0; $('#btn-next').disabled=idx>=allEps.length-1;
+  intro=null; outro=null; $('#skip-btn').classList.remove('on');
+  setMsg(`Loading ep ${ep.number}…`,true);
+  try{
+    const url=await getStream(ep);
+    if(!url) throw new Error('No stream URL found — all sources exhausted. Check debug panel.');
+    log('▶',url.slice(0,90));
     playHLS(url);
-  } catch (e) {
-    log('stream error:', e.message);
-    setMsg(null, false, true, e.message, () => retryIdx !== null && loadEp(retryIdx));
+  }catch(e){
+    log('stream error:',e.message);
+    setMsg(null,false,true,e.message,()=>retryIdx!==null&&loadEp(retryIdx));
   }
 }
 
-// ── GET STREAM URL ─────────────────────────────────────────────────────────────
+// ── GET STREAM ────────────────────────────────────────────────────────────────
+// 
+// How Miruro actually works:
+//   The page is a React/Next.js app. The stream URL (pro.ultracloud.cc/TOKEN/pl.m3u8)
+//   is fetched client-side by Miruro's JS and injected into a <video><source>.
+//   There is NO static HTML or simple JSON endpoint that reliably returns it.
+//
 // Strategy:
-//   1. Try Miruro JSON API endpoints (fastest, clean JSON → .m3u8)
-//   2. Scrape Miruro watch page HTML for an m3u8 URL
-//   (NO iframes — Miruro blocks X-Frame-Options: sameorigin)
-async function getStream(ep) {
-  const id = curAnime.id, n = ep.number, cat = curAudio;
+//   1. Ask the worker's /extract endpoint to try all known Miruro API shapes.
+//      The worker runs these from a server context with correct Referer/Origin.
+//   2. If /extract fails, fall back to direct pFetch of known API URLs.
+//
+async function getStream(ep){
+  const id=curAnime.id, n=ep.number, cat=curAudio;
+  const title=curAnime.title?.english||curAnime.title?.romaji||'';
 
-  // ── Round 1: JSON API endpoints ──────────────────────────────────────────
-  const servers = ['vidcloud', 'vsrc', 'streamsb', 'streamtape', ''];
-  const apiPatterns = [
-    (srv) => `https://www.miruro.tv/api/v2/watch?id=${id}&ep=${n}${srv ? `&server=${srv}` : ''}&category=${cat}`,
-    (srv) => `https://www.miruro.tv/api/watch?id=${id}&ep=${n}${srv ? `&server=${srv}` : ''}&category=${cat}`,
-    (srv) => `https://www.miruro.tv/api/v2/source?id=${id}&ep=${n}${srv ? `&server=${srv}` : ''}&category=${cat}`,
-    (srv) => `https://www.miruro.tv/api/v1/watch/${id}?ep=${n}${srv ? `&server=${srv}` : ''}&category=${cat}`,
+  // ── Route 1: worker /extract (server-side API hunt) ───────────────────────
+  try{
+    const res = await pExtract(id, n, cat, title);
+    if(res.url){ log('✓ /extract →',res.via); if(res.intro)intro=res.intro; if(res.outro)outro=res.outro; return res.url; }
+    if(res.log) res.log.forEach(l=>log('  ',l.url?.slice(0,60)||'',l.status||l.error||''));
+  }catch(e){ log('/extract call failed:',e.message); }
+
+  // ── Route 2: direct pFetch API fallback (for cases worker can't reach) ────
+  const directApis=[
+    `https://www.miruro.tv/api/v2/watch?id=${id}&ep=${n}&server=vidcloud&category=${cat}`,
+    `https://www.miruro.tv/api/v2/watch?id=${id}&ep=${n}&category=${cat}`,
+    `https://www.miruro.tv/api/watch?id=${id}&ep=${n}&category=${cat}`,
+    `https://www.miruro.tv/api/v2/source?id=${id}&ep=${n}&category=${cat}`,
   ];
-
-  for (const pattern of apiPatterns) {
-    for (const srv of servers) {
-      const url = pattern(srv);
-      try {
-        log('trying API:', url);
-        const r = await pFetch(url);
-        const text = await r.text();
-        let json; try { json = JSON.parse(text); } catch { continue; }
-        log('API response keys:', Object.keys(json || {}));
-        const m3 = extractM3(json);
-        if (m3) {
-          if (json.intro) intro = json.intro;
-          if (json.outro) outro = json.outro;
-          log('✓ m3u8 from API:', m3.slice(0, 80));
-          return m3;
-        }
-      } catch (e) { log('API fail:', url.slice(0, 60), e.message); }
-    }
-  }
-
-  // ── Round 2: scrape the Miruro watch page HTML ────────────────────────────
-  log('falling back to page scrape…');
-  const titles = [
-    curAnime.title?.english,
-    curAnime.title?.romaji,
-    String(id),
-  ].filter(Boolean);
-
-  for (const title of titles) {
-    const slug = mkSlug(title);
-    const pageUrl = `https://www.miruro.tv/watch/${id}/${slug}?ep=${n}`;
-    try {
-      log('scraping page:', pageUrl);
-      const r = await pFetch(pageUrl);
-      const html = await r.text();
-      const m3 = scrapeM3(html);
-      if (m3) { log('✓ m3u8 from page scrape:', m3.slice(0, 80)); return m3; }
-    } catch (e) { log('page scrape fail:', e.message); }
+  for(const url of directApis){
+    try{
+      log('direct api:',url.slice(0,80));
+      const r=await pFetch(url); const text=await r.text();
+      let obj; try{obj=JSON.parse(text)}catch{continue;}
+      const m3=extractM3client(obj);
+      if(m3){ if(obj.intro)intro=obj.intro; if(obj.outro)outro=obj.outro; return m3; }
+    }catch(e){ log('direct api fail:',e.message); }
   }
 
   return null;
 }
 
-// ── HELPERS: extract m3u8 from JSON / HTML ─────────────────────────────────
-function extractM3(j) {
-  if (!j) return null;
-  // Direct string fields
-  for (const key of ['url', 'stream', 'link', 'src', 'file', 'streamUrl', 'playUrl', 'hls']) {
-    if (typeof j[key] === 'string' && j[key].includes('.m3u8')) return j[key];
-  }
-  // sources / streams arrays
-  for (const key of ['sources', 'streams', 'links']) {
-    if (Array.isArray(j[key])) {
-      const best = j[key].find(s => (s.url || s.file || s.src || '').includes('.m3u8'));
-      if (best) return best.url || best.file || best.src;
-    }
-  }
-  // Recurse into wrapper fields
-  for (const key of ['data', 'result', 'video', 'media', 'stream', 'source']) {
-    if (j[key] && typeof j[key] === 'object') {
-      const r = extractM3(j[key]); if (r) return r;
-    }
-  }
-  // Last resort: scan all string values
-  for (const v of Object.values(j)) {
-    if (typeof v === 'string' && v.includes('.m3u8')) return v;
-  }
-  return null;
-}
-
-function scrapeM3(html) {
-  const patterns = [
-    /["'`](https?:\/\/[^"'`\s]*?\.m3u8[^"'`\s]*?)["'`]/g,
-    /(?:src|file|url|source|hls)\s*[:=]\s*["']?(https?:\/\/[^"'\s,;>]*?\.m3u8[^"'\s,;>]*)["']?/gi,
-    /(https?:\/\/\S+\.m3u8[^\s"'<>]*)/g,
-  ];
-  for (const re of patterns) {
-    re.lastIndex = 0;
-    const m = re.exec(html);
-    if (m) return m[1];
-  }
+// Client-side m3u8 extractor (mirrors worker's extractM3)
+function extractM3client(j){
+  if(!j)return null;
+  for(const k of ['url','stream','link','src','file','streamUrl','playUrl','hls','source','m3u8']){ if(typeof j[k]==='string'&&j[k].includes('.m3u8'))return j[k]; }
+  for(const k of ['sources','streams','links','tracks','qualities']){ if(Array.isArray(j[k])){ const h=j[k].find(s=>typeof s==='object'&&(s.url||s.file||s.src||'').includes('.m3u8')); if(h)return h.url||h.file||h.src; } }
+  for(const k of ['data','result','video','media','stream','source','response','content']){ if(j[k]&&typeof j[k]==='object'){const r=extractM3client(j[k]);if(r)return r;} }
+  for(const v of Object.values(j)){if(typeof v==='string'&&v.includes('.m3u8'))return v;}
   return null;
 }
 
 // ── HLS PLAYER ────────────────────────────────────────────────────────────────
-function playHLS(rawUrl) {
-  const url = pStream(rawUrl);  // route through worker /stream for CORS
-  const v = $('#player');
-  hideMsg();
-
-  if (window._hls) { window._hls.destroy(); window._hls = null; }
-
-  if (Hls.isSupported()) {
-    const hls = new Hls({
-      maxBufferLength: 30,
-      enableWorker: false,
-      xhrSetup(xhr) {
-        // headers already handled by worker
-      },
-    });
-    window._hls = hls;
-    hls.loadSource(url);
-    hls.attachMedia(v);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => { log('HLS manifest parsed, playing'); v.play().catch(() => {}); });
-    hls.on(Hls.Events.ERROR, (_, d) => {
-      log('HLS error:', d.type, d.details, d.fatal);
-      if (d.fatal) setMsg(null, false, true, 'Playback error — try Retry or switch SUB/DUB.', () => retryIdx !== null && loadEp(retryIdx));
-    });
-  } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-    // Safari native HLS
-    v.src = url; v.load(); v.play().catch(() => {});
+function playHLS(rawUrl){
+  const url=pStream(rawUrl);
+  const v=$('#player'); hideMsg();
+  if(window._hls){window._hls.destroy();window._hls=null;}
+  if(Hls.isSupported()){
+    const hls=new Hls({maxBufferLength:30,enableWorker:false});
+    window._hls=hls; hls.loadSource(url); hls.attachMedia(v);
+    hls.on(Hls.Events.MANIFEST_PARSED,()=>{ log('manifest ok'); v.play().catch(()=>{}); });
+    hls.on(Hls.Events.ERROR,(_,d)=>{ log('hls err',d.type,d.details,d.fatal); if(d.fatal)setMsg(null,false,true,'Playback error — retry or switch SUB↔DUB.',()=>retryIdx!==null&&loadEp(retryIdx)); });
+  } else if(v.canPlayType('application/vnd.apple.mpegurl')){
+    v.src=url; v.load(); v.play().catch(()=>{});
   } else {
-    setMsg(null, false, true, 'HLS not supported in this browser. Try Chrome or Firefox.');
+    setMsg(null,false,true,'HLS not supported. Use Chrome or Firefox.');
   }
 }
 
-function swAudio(t) { curAudio = t; $('#btn-sub').classList.toggle('active', t === 'sub'); $('#btn-dub').classList.toggle('active', t === 'dub'); loadEp(curEpIdx); }
-function prevEp() { if (curEpIdx > 0) loadEp(curEpIdx - 1); }
-function nextEp() { if (curEpIdx < allEps.length - 1) loadEp(curEpIdx + 1); }
+function swAudio(t){ curAudio=t; $('#btn-sub').classList.toggle('active',t==='sub'); $('#btn-dub').classList.toggle('active',t==='dub'); loadEp(curEpIdx); }
+function prevEp(){ if(curEpIdx>0)loadEp(curEpIdx-1); }
+function nextEp(){ if(curEpIdx<allEps.length-1)loadEp(curEpIdx+1); }
 
-// ── SKIP INTRO/OUTRO ──────────────────────────────────────────────────────────
-let skipTarget = null;
-$('#player').addEventListener('timeupdate', () => {
-  const v = $('#player'), t = v.currentTime, b = $('#skip-btn');
-  if (intro && t >= intro.start && t < intro.end - 1) {
-    b.textContent = '⏭ Skip Intro'; skipTarget = intro.end; b.classList.add('on');
-  } else if (outro && t >= outro.start && t < outro.end - 1) {
-    b.textContent = '⏭ Skip Outro'; skipTarget = outro.end; b.classList.add('on');
-  } else { b.classList.remove('on'); skipTarget = null; }
+// ── SKIP ──────────────────────────────────────────────────────────────────────
+let skipTarget=null;
+$('#player').addEventListener('timeupdate',()=>{
+  const v=$('#player'),t=v.currentTime,b=$('#skip-btn');
+  if(intro&&t>=intro.start&&t<intro.end-1){ b.textContent='⏭ Skip Intro'; skipTarget=intro.end; b.classList.add('on'); }
+  else if(outro&&t>=outro.start&&t<outro.end-1){ b.textContent='⏭ Skip Outro'; skipTarget=outro.end; b.classList.add('on'); }
+  else{ b.classList.remove('on'); skipTarget=null; }
 });
-function doSkip() { if (skipTarget != null) { $('#player').currentTime = skipTarget; $('#skip-btn').classList.remove('on'); } }
+function doSkip(){ if(skipTarget!=null){$('#player').currentTime=skipTarget;$('#skip-btn').classList.remove('on');} }
 
-// ── PLAYER MESSAGES ───────────────────────────────────────────────────────────
-function setMsg(txt, spin = false, isErr = false, errTxt = '', retryFn = null) {
-  const m = $('#pmsg'); m.style.display = 'flex';
-  if (isErr) {
-    m.innerHTML = `<div class="perr">⚠ ${errTxt || 'Stream unavailable'}<small>Open the debug panel (bottom-right) for details.</small></div>${retryFn ? '<button class="rbtn" id="rbtn">↺ Retry</button>' : ''}`;
-    if (retryFn && $('#rbtn')) $('#rbtn').onclick = retryFn;
-  } else {
-    m.innerHTML = (spin ? '<div class="spin"></div>' : '') + `<div class="ptxt">${txt || ''}</div>`;
-  }
+// ── MESSAGES ──────────────────────────────────────────────────────────────────
+function setMsg(txt,spin=false,isErr=false,errTxt='',retryFn=null){
+  const m=$('#pmsg'); m.style.display='flex';
+  if(isErr){ m.innerHTML=`<div class="perr">⚠ ${errTxt||'Stream unavailable'}<small>Open the debug panel (bottom-right ▸ dbg) for details.</small></div>${retryFn?'<button class="rbtn" id="rbtn">↺ Retry</button>':''}`;if(retryFn&&$('#rbtn'))$('#rbtn').onclick=retryFn; }
+  else{ m.innerHTML=(spin?'<div class="spin"></div>':'')+`<div class="ptxt">${txt||''}</div>`; }
 }
-function hideMsg() { const m = $('#pmsg'); if (m) m.style.display = 'none'; }
+function hideMsg(){ const m=$('#pmsg'); if(m)m.style.display='none'; }
 
 // ── ANIME INFO ────────────────────────────────────────────────────────────────
-function renderInfo() {
-  const a = curAnime; if (!a) return;
-  const t = a.title?.english || a.title?.romaji || '';
-  const img = a.coverImage?.large || FB;
-  const desc = strip(a.description || '');
-  const sc = a.averageScore;
-  const c = sc >= 80 ? 'var(--green)' : sc >= 60 ? 'var(--gold)' : 'var(--red)';
-  $('#ainfo').innerHTML = `<div class="aihead"><div class="aiposter"><img src="${img}" alt="${t}"></div><div><div class="aititle">${t}</div><div class="aichips">${(a.genres || []).slice(0, 5).map(g => `<span class="chip">${g}</span>`).join('')}</div><div class="aistats">${sc ? `<div><div class="aisv" style="color:${c}">★ ${(sc / 10).toFixed(1)}</div><div class="aisl">Score</div></div>` : ''}<div><div class="aisv">${a.episodes || '?'}</div><div class="aisl">Episodes</div></div><div><div class="aisv">${a.seasonYear || '—'}</div><div class="aisl">Year</div></div><div><div class="aisv" style="font-size:.68rem">${a.status || '—'}</div><div class="aisl">Status</div></div></div></div></div><div class="aidesc col" id="aidesc">${desc}</div><button class="xbtn" onclick="toggleDesc()">Show more ↓</button>`;
+function renderInfo(){
+  const a=curAnime; if(!a)return;
+  const t=a.title?.english||a.title?.romaji||'', img=a.coverImage?.large||FB, desc=strip(a.description||''), sc=a.averageScore;
+  const c=sc>=80?'var(--green)':sc>=60?'var(--gold)':'var(--red)';
+  $('#ainfo').innerHTML=`<div class="aihead"><div class="aiposter"><img src="${img}" alt="${t}"></div><div><div class="aititle">${t}</div><div class="aichips">${(a.genres||[]).slice(0,5).map(g=>`<span class="chip">${g}</span>`).join('')}</div><div class="aistats">${sc?`<div><div class="aisv" style="color:${c}">★ ${(sc/10).toFixed(1)}</div><div class="aisl">Score</div></div>`:''}<div><div class="aisv">${a.episodes||'?'}</div><div class="aisl">Episodes</div></div><div><div class="aisv">${a.seasonYear||'—'}</div><div class="aisl">Year</div></div><div><div class="aisv" style="font-size:.68rem">${a.status||'—'}</div><div class="aisl">Status</div></div></div></div></div><div class="aidesc col" id="aidesc">${desc}</div><button class="xbtn" onclick="toggleDesc()">Show more ↓</button>`;
 }
-function toggleDesc() { const d = $('#aidesc'), b = d.nextElementSibling; const c = d.classList.toggle('col'); b.textContent = c ? 'Show more ↓' : 'Show less ↑'; }
+function toggleDesc(){ const d=$('#aidesc'),b=d.nextElementSibling; const c=d.classList.toggle('col'); b.textContent=c?'Show more ↓':'Show less ↑'; }
 
 // ── RELATED ───────────────────────────────────────────────────────────────────
-function renderRel() {
-  const a = curAnime; if (!a) return;
-  const rels = (a.relations?.edges || []).map(e => ({ id: e.node.id, title: e.node.title, img: e.node.coverImage?.large, type: e.relationType }));
-  const recs = (a.recommendations?.nodes || []).map(n => n.mediaRecommendation).filter(Boolean).map(m => ({ id: m.id, title: m.title, img: m.coverImage?.large, type: 'REC' }));
-  const items = [...rels.slice(0, 6), ...recs.slice(0, 5)].filter(r => r.id);
-  const s = $('#relsec');
-  if (!items.length) { s.style.display = 'none'; return; }
-  s.style.display = 'block';
-  s.innerHTML = `<div class="sectitle">Related & Recommended</div><div class="relscroll">${items.map(r => `<div class="relcard" onclick="openAnime(${r.id})"><img src="${r.img || FB}" loading="lazy" onerror="this.src='${FB}'"><div class="relct">${r.title?.english || r.title?.romaji || ''}</div><div class="relcf">${r.type || ''}</div></div>`).join('')}</div>`;
+function renderRel(){
+  const a=curAnime; if(!a)return;
+  const rels=(a.relations?.edges||[]).map(e=>({id:e.node.id,title:e.node.title,img:e.node.coverImage?.large,type:e.relationType}));
+  const recs=(a.recommendations?.nodes||[]).map(n=>n.mediaRecommendation).filter(Boolean).map(m=>({id:m.id,title:m.title,img:m.coverImage?.large,type:'REC'}));
+  const items=[...rels.slice(0,6),...recs.slice(0,5)].filter(r=>r.id);
+  const s=$('#relsec'); if(!items.length){s.style.display='none';return;}
+  s.style.display='block';
+  s.innerHTML=`<div class="sectitle">Related & Recommended</div><div class="relscroll">${items.map(r=>`<div class="relcard" onclick="openAnime(${r.id})"><img src="${r.img||FB}" loading="lazy" onerror="this.src='${FB}'"><div class="relct">${r.title?.english||r.title?.romaji||''}</div><div class="relcf">${r.type||''}</div></div>`).join('')}</div>`;
 }
 
 // ── PAGE NAV ──────────────────────────────────────────────────────────────────
-function showPage(id) { $$('.page').forEach(p => p.classList.remove('active')); $('#' + id).classList.add('active'); window.scrollTo(0, 0); }
-function showHome() { if (window._hls) { window._hls.destroy(); window._hls = null; } $('#player').pause(); showPage('home'); }
+function showPage(id){ $$('.page').forEach(p=>p.classList.remove('active')); $('#'+id).classList.add('active'); window.scrollTo(0,0); }
+function showHome(){ if(window._hls){window._hls.destroy();window._hls=null;} $('#player').pause(); showPage('home'); }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-loadSpotlight();
-loadGrid('TRENDING_DESC', 1, '');
+loadSpotlight(); loadGrid('TRENDING_DESC',1,'');
 </script>
 </body>
 </html>
