@@ -142,6 +142,9 @@ video#player{width:100%;height:100%;display:block;background:#000}
 .relct{font-size:.66rem;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .relcf{font-size:.59rem;color:var(--muted);margin-top:2px}
 
+/* provider badge */
+.provbadge{font-size:.6rem;color:var(--muted);font-family:'Space Mono',monospace;padding:0 3px}
+
 /* Debug panel */
 #dbg{position:fixed;bottom:0;left:0;right:0;max-height:180px;overflow-y:auto;background:rgba(5,5,14,.95);font-family:'Space Mono',monospace;font-size:.62rem;color:#a29bfe;padding:6px 10px 24px;z-index:9000;display:none;border-top:1px solid var(--border)}
 #dbg.on{display:block}
@@ -237,6 +240,7 @@ video#player{width:100%;height:100%;display:block;background:#000}
           <button class="cb active" id="btn-sub" onclick="swAudio('sub')">SUB</button>
           <button class="cb" id="btn-dub" onclick="swAudio('dub')">DUB</button>
         </div>
+        <span class="provbadge" id="prov-badge"></span>
         <div class="csep"></div>
         <div class="nbtns">
           <button class="enav" id="btn-prev" onclick="prevEp()"><svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4v16H3V4h2z"/></svg>Prev</button>
@@ -278,27 +282,10 @@ function workerUrl(route, params) {
   return `${base}${route}${qs ? '?' + qs : ''}`;
 }
 
-async function pFetch(url) {
-  const dest = workerUrl('/page', { url });
-  log('pFetch', dest.slice(0,100));
-  const r = await fetch(dest);
-  if (!r.ok) throw new Error(`Worker /page HTTP ${r.status}`);
-  return r;
-}
-
-// Route the raw m3u8 URL through /stream so segments get proxied
+// Proxy an m3u8 URL through /stream so segments get rewritten too
 function pStream(rawUrl) {
   if (!PROXY) return rawUrl;
   return workerUrl('/stream', { url: rawUrl });
-}
-
-// Call /extract on the worker — it runs all Miruro API shapes server-side
-async function pExtract(id, ep, cat, title) {
-  const dest = workerUrl('/extract', { id, ep, cat, title: title || '' });
-  log('pExtract', dest.slice(0,120));
-  const r = await fetch(dest);
-  const json = await r.json();
-  return json; // { url, intro, outro, via } or { error, log }
 }
 
 function saveProxy() {
@@ -308,9 +295,9 @@ function saveProxy() {
   updatePBtn(); dismissBanner(); toast('✓ Saved!');
 }
 function dismissBanner() { document.getElementById('proxy-banner').style.display = 'none'; if (PROXY) localStorage.setItem('animura_bok','1'); }
-function showBanner()   { document.getElementById('proxy-banner').style.display = 'flex'; }
-function toggleBanner() { const b = document.getElementById('proxy-banner'); b.style.display = b.style.display === 'none' ? 'flex' : 'none'; }
-function updatePBtn()   { const b = document.getElementById('pbtn'); b.textContent = PROXY ? '✓ Worker' : '⚙ Worker'; b.classList.toggle('ok', !!PROXY); }
+function showBanner()    { document.getElementById('proxy-banner').style.display = 'flex'; }
+function toggleBanner()  { const b = document.getElementById('proxy-banner'); b.style.display = b.style.display === 'none' ? 'flex' : 'none'; }
+function updatePBtn()    { const b = document.getElementById('pbtn'); b.textContent = PROXY ? '✓ Worker' : '⚙ Worker'; b.classList.toggle('ok', !!PROXY); }
 if (PROXY) { document.getElementById('proxy-input').value = PROXY; updatePBtn(); if (localStorage.getItem('animura_bok')) document.getElementById('proxy-banner').style.display = 'none'; }
 
 // ── ANILIST ────────────────────────────────────────────────────────────────────
@@ -335,7 +322,6 @@ const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s)
 const strip = h => h ? h.replace(/<[^>]*>/g,'') : '';
 const FB = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='3' height='4'%3E%3Crect fill='%23141422' width='3' height='4'/%3E%3C/svg%3E";
 function toast(msg,ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
-function mkSlug(t){ return t.toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').replace(/-+/g,'-'); }
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
 let spotlight=[], spIdx=0, spTimer;
@@ -409,7 +395,7 @@ async function openAnime(id, startIdx=0) {
   curAnime=null; allEps=[]; filteredEps=[]; curEpIdx=startIdx; curAudio='sub';
   $('#btn-sub').classList.add('active'); $('#btn-dub').classList.remove('active');
   $('#eplist').innerHTML='<div style="padding:18px;text-align:center;color:var(--muted);font-size:.76rem;">Loading…</div>';
-  $('#ainfo').innerHTML=''; $('#relsec').style.display='none';
+  $('#ainfo').innerHTML=''; $('#relsec').style.display='none'; $('#prov-badge').textContent='';
   setMsg('Fetching info…',true);
   const q=`query($id:Int){Media(id:$id,type:ANIME){${F}relations{edges{relationType node{id title{romaji english}coverImage{large}format}}}recommendations(sort:RATING_DESC,perPage:10){nodes{rating mediaRecommendation{id title{romaji english}coverImage{large}format}}}}}`;
   try { const d=await gql(q,{id}); curAnime=d.Media; renderInfo(); renderRel(); await loadEpList(id); }
@@ -417,34 +403,57 @@ async function openAnime(id, startIdx=0) {
 }
 
 // ── EPISODE LIST ──────────────────────────────────────────────────────────────
+// Uses the worker's /episodes route → miruro-api.vercel.app/episodes/{id}
 async function loadEpList(id) {
-  const endpoints=[
-    `https://www.miruro.tv/api/v2/episodes?id=${id}`,
-    `https://www.miruro.tv/api/episodes?id=${id}`,
-    `https://www.miruro.tv/api/v1/episodes/${id}`,
-  ];
-  let epList=[];
-  for(const url of endpoints){
-    try{
-      const r=await pFetch(url); const text=await r.text();
-      let json; try{ json=JSON.parse(text); }catch{ continue; }
-      if(Array.isArray(json)&&json.length){ epList=json; log('eps from',url,'→',json.length); break; }
-      if(Array.isArray(json?.episodes)&&json.episodes.length){ epList=json.episodes; break; }
-      if(Array.isArray(json?.data)&&json.data.length){ epList=json.data; break; }
-    }catch(e){ log('ep endpoint fail:',e.message); }
+  let episodeData = null;
+
+  try {
+    const url = workerUrl('/episodes', { id });
+    log('episodes →', url.slice(0, 80));
+    const r = await fetch(url);
+    if (r.ok) {
+      episodeData = await r.json();
+      log('episodes ok, providers:', Object.keys(episodeData.providers || {}).join(', '));
+    } else {
+      log('episodes HTTP', r.status);
+    }
+  } catch(e) {
+    log('episodes fetch failed:', e.message);
   }
-  if(!epList.length){
-    const cnt=curAnime?.episodes||1; log('stub',cnt,'eps');
-    epList=Array.from({length:cnt},(_,i)=>({number:i+1,title:`Episode ${i+1}`}));
+
+  // Build episode list from best provider
+  const PREF = ['kiwi', 'arc', 'zoro', 'jet'];
+  let epList = [];
+
+  if (episodeData?.providers) {
+    const providers = episodeData.providers;
+    const ordered = [...PREF.filter(p => providers[p]), ...Object.keys(providers).filter(p => !PREF.includes(p))];
+    for (const prov of ordered) {
+      const subEps = providers[prov]?.episodes?.sub || providers[prov]?.episodes?.dub || [];
+      if (subEps.length) {
+        epList = subEps.map(ep => ({
+          number: ep.number,
+          title:  ep.title || `Episode ${ep.number}`,
+          image:  ep.image || null,
+        }));
+        log('using provider', prov, '→', epList.length, 'eps');
+        break;
+      }
+    }
   }
-  allEps=epList.map((ep,i)=>({
-    number: ep.number??ep.ep??(i+1),
-    title:  ep.title||ep.name||`Episode ${ep.number??i+1}`,
-    id:     ep.id||ep.episodeId||String(ep.number??i+1),
-  }));
-  filteredEps=allEps;
-  $('#epct').textContent=allEps.length+' eps';
-  renderEpItems(); loadEp(curEpIdx);
+
+  // Fallback: stub from AniList episode count
+  if (!epList.length) {
+    const cnt = curAnime?.episodes || 1;
+    log('stub', cnt, 'eps');
+    epList = Array.from({length: cnt}, (_, i) => ({ number: i+1, title: `Episode ${i+1}` }));
+  }
+
+  allEps = epList;
+  filteredEps = allEps;
+  $('#epct').textContent = allEps.length + ' eps';
+  renderEpItems();
+  loadEp(curEpIdx);
 }
 
 function renderEpItems(){
@@ -464,74 +473,57 @@ async function loadEp(idx){
   const ae=$('.epi.active'); if(ae)ae.scrollIntoView({block:'nearest',behavior:'smooth'});
   $('#btn-prev').disabled=idx===0; $('#btn-next').disabled=idx>=allEps.length-1;
   intro=null; outro=null; $('#skip-btn').classList.remove('on');
+  $('#prov-badge').textContent='';
   setMsg(`Loading ep ${ep.number}…`,true);
-  try{
-    const url=await getStream(ep);
-    if(!url) throw new Error('No stream URL found — all sources exhausted. Check debug panel.');
-    log('▶',url.slice(0,90));
+  try {
+    const { url, provider, introData, outroData } = await getStream(ep.number, curAudio);
+    if (!url) throw new Error('No stream URL found. Open debug panel for details.');
+    if (provider) $('#prov-badge').textContent = provider;
+    if (introData) intro = introData;
+    if (outroData) outro = outroData;
+    log('▶', url.slice(0,90));
     playHLS(url);
-  }catch(e){
-    log('stream error:',e.message);
-    setMsg(null,false,true,e.message,()=>retryIdx!==null&&loadEp(retryIdx));
+  } catch(e) {
+    log('stream error:', e.message);
+    setMsg(null, false, true, e.message, ()=>retryIdx!==null&&loadEp(retryIdx));
   }
 }
 
 // ── GET STREAM ────────────────────────────────────────────────────────────────
-// 
-// How Miruro actually works:
-//   The page is a React/Next.js app. The stream URL (pro.ultracloud.cc/TOKEN/pl.m3u8)
-//   is fetched client-side by Miruro's JS and injected into a <video><source>.
-//   There is NO static HTML or simple JSON endpoint that reliably returns it.
-//
-// Strategy:
-//   1. Ask the worker's /extract endpoint to try all known Miruro API shapes.
-//      The worker runs these from a server context with correct Referer/Origin.
-//   2. If /extract fails, fall back to direct pFetch of known API URLs.
-//
-async function getStream(ep){
-  const id=curAnime.id, n=ep.number, cat=curAudio;
-  const title=curAnime.title?.english||curAnime.title?.romaji||'';
+// Calls worker /stream-url → miruro-api 3-step flow
+// Returns { url, provider, introData, outroData }
+async function getStream(epNumber, cat) {
+  const id = curAnime.id;
 
-  // ── Route 1: worker /extract (server-side API hunt) ───────────────────────
-  try{
-    const res = await pExtract(id, n, cat, title);
-    if(res.url){ log('✓ /extract →',res.via); if(res.intro)intro=res.intro; if(res.outro)outro=res.outro; return res.url; }
-    if(res.log) res.log.forEach(l=>log('  ',l.url?.slice(0,60)||'',l.status||l.error||''));
-  }catch(e){ log('/extract call failed:',e.message); }
+  try {
+    const dest = workerUrl('/stream-url', { id, ep: epNumber, cat });
+    log('stream-url →', dest.slice(0, 90));
+    const r = await fetch(dest);
+    const data = await r.json();
+    log('stream-url response:', JSON.stringify(data).slice(0, 200));
 
-  // ── Route 2: direct pFetch API fallback (for cases worker can't reach) ────
-  const directApis=[
-    `https://www.miruro.tv/api/v2/watch?id=${id}&ep=${n}&server=vidcloud&category=${cat}`,
-    `https://www.miruro.tv/api/v2/watch?id=${id}&ep=${n}&category=${cat}`,
-    `https://www.miruro.tv/api/watch?id=${id}&ep=${n}&category=${cat}`,
-    `https://www.miruro.tv/api/v2/source?id=${id}&ep=${n}&category=${cat}`,
-  ];
-  for(const url of directApis){
-    try{
-      log('direct api:',url.slice(0,80));
-      const r=await pFetch(url); const text=await r.text();
-      let obj; try{obj=JSON.parse(text)}catch{continue;}
-      const m3=extractM3client(obj);
-      if(m3){ if(obj.intro)intro=obj.intro; if(obj.outro)outro=obj.outro; return m3; }
-    }catch(e){ log('direct api fail:',e.message); }
+    if (data.url) {
+      return {
+        url: data.url,
+        provider: data.provider || null,
+        introData: data.intro || null,
+        outroData: data.outro || null,
+      };
+    }
+
+    if (data.error) throw new Error(data.error);
+  } catch(e) {
+    log('stream-url call failed:', e.message);
+    throw e;
   }
 
-  return null;
-}
-
-// Client-side m3u8 extractor (mirrors worker's extractM3)
-function extractM3client(j){
-  if(!j)return null;
-  for(const k of ['url','stream','link','src','file','streamUrl','playUrl','hls','source','m3u8']){ if(typeof j[k]==='string'&&j[k].includes('.m3u8'))return j[k]; }
-  for(const k of ['sources','streams','links','tracks','qualities']){ if(Array.isArray(j[k])){ const h=j[k].find(s=>typeof s==='object'&&(s.url||s.file||s.src||'').includes('.m3u8')); if(h)return h.url||h.file||h.src; } }
-  for(const k of ['data','result','video','media','stream','source','response','content']){ if(j[k]&&typeof j[k]==='object'){const r=extractM3client(j[k]);if(r)return r;} }
-  for(const v of Object.values(j)){if(typeof v==='string'&&v.includes('.m3u8'))return v;}
-  return null;
+  throw new Error('No URL in response');
 }
 
 // ── HLS PLAYER ────────────────────────────────────────────────────────────────
 function playHLS(rawUrl){
-  const url=pStream(rawUrl);
+  // Route through worker /stream so m3u8 segments get proxied (CORS fix)
+  const url = pStream(rawUrl);
   const v=$('#player'); hideMsg();
   if(window._hls){window._hls.destroy();window._hls=null;}
   if(Hls.isSupported()){
