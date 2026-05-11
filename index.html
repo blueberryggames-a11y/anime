@@ -304,23 +304,59 @@ if (PROXY) {
 const AL = 'https://graphql.anilist.co';
 
 async function gql(q, v = {}) {
+  const body = JSON.stringify({ query: q, variables: v });
   const r = await fetch(AL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ query: q, variables: v }),
+    body,
   });
-  if (!r.ok) throw new Error('AniList ' + r.status);
-  const { data, errors } = await r.json();
-  if (errors?.length) throw new Error(errors[0].message);
-  return data;
+  const json = await r.json().catch(() => null);
+  if (!r.ok) {
+    const msg = json?.errors?.[0]?.message || `HTTP ${r.status}`;
+    log('AniList error:', msg, '| vars:', Object.keys(v).join(','));
+    throw new Error('AniList: ' + msg);
+  }
+  if (json?.errors?.length) throw new Error(json.errors[0].message);
+  return json.data;
 }
 
 const F = `id title{romaji english}description(asHtml:false)coverImage{extraLarge large}bannerImage format status seasonYear episodes averageScore genres`;
 
 async function aPage(vars) {
-  const s = vars.sort || 'TRENDING_DESC';
-  const q = `query($page:Int,$perPage:Int${vars.search !== undefined ? ',$search:String' : ''}${vars.genre ? ',$genre:String' : ''}${vars.season ? ',$season:MediaSeason,$year:Int' : ''}${vars.status ? ',$status:MediaStatus' : ''}){Page(page:$page,perPage:$perPage){pageInfo{hasNextPage}media(type:ANIME,sort:[${s}]${vars.search !== undefined ? ',search:$search' : ''}${vars.genre ? ',genre:$genre' : ''}${vars.season ? ',season:$season,seasonYear:$year' : ''}${vars.status ? ',status:$status' : ''}){${F}}}}`;
-  const d = await gql(q, vars);
+  const sort   = vars.sort   || 'TRENDING_DESC';
+  const page   = vars.page   || 1;
+  const perPage = vars.perPage || 24;
+
+  // Build query + variable bag containing ONLY what we declare
+  const gqlVars = { page, perPage };
+
+  let decl   = '$page:Int,$perPage:Int';
+  let filter = `type:ANIME,sort:[${sort}]`;
+
+  if (vars.search !== undefined) {
+    decl += ',$search:String';
+    filter += ',search:$search';
+    gqlVars.search = vars.search;
+  }
+  if (vars.genre) {
+    decl += ',$genre:String';
+    filter += ',genre:$genre';
+    gqlVars.genre = vars.genre;
+  }
+  if (vars.season) {
+    decl += ',$season:MediaSeason,$year:Int';
+    filter += ',season:$season,seasonYear:$year';
+    gqlVars.season = vars.season;
+    gqlVars.year   = vars.year;
+  }
+  if (vars.status) {
+    decl += ',$status:MediaStatus';
+    filter += ',status:$status';
+    gqlVars.status = vars.status;
+  }
+
+  const q = `query(${decl}){Page(page:$page,perPage:$perPage){pageInfo{hasNextPage}media(${filter}){${F}}}}`;
+  const d = await gql(q, gqlVars);
   return { results: d.Page.media || [], hasNextPage: d.Page.pageInfo.hasNextPage };
 }
 
